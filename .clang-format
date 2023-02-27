@@ -1,0 +1,14 @@
+BasedOnStyle: LLVM
+BreakBeforeBraces: Stroustrup
+TabWidth: 4
+IndentWidth: 4
+UseTab: Never
+AllowShortIfStatementsOnASingleLine: false
+IndentCaseLabels: true
+ColumnLimit: 200
+PointerAlignment: Left
+AllowShortBlocksOnASingleLine: Empty
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
