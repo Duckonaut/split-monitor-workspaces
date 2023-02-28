@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <vector>
 
-const std::string s_workspaceCount = "plugin:split-monitor-workspaces:count";
+const std::string k_workspaceCount = "plugin:split-monitor-workspaces:count";
 const CColor s_pluginColor = {0x61 / 255.0f, 0xAF / 255.0f, 0xEF / 255.0f, 1.0f};
 
 std::map<uint64_t, std::vector<std::string>> g_vMonitorWorkspaceMap;
@@ -39,7 +39,6 @@ const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string&
 void monitorWorkspace(std::string workspace)
 {
     CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
-    int workspaceCount = HyprlandAPI::getConfigValue(PHANDLE, s_workspaceCount)->intValue;
 
     HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + getWorkspaceFromMonitor(monitor, workspace));
 }
@@ -47,7 +46,6 @@ void monitorWorkspace(std::string workspace)
 void monitorMoveToWorkspace(std::string workspace)
 {
     CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
-    int workspaceCount = HyprlandAPI::getConfigValue(PHANDLE, s_workspaceCount)->intValue;
 
     HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + getWorkspaceFromMonitor(monitor, workspace));
 }
@@ -55,7 +53,6 @@ void monitorMoveToWorkspace(std::string workspace)
 void monitorMoveToWorkspaceSilent(std::string workspace)
 {
     CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
-    int workspaceCount = HyprlandAPI::getConfigValue(PHANDLE, s_workspaceCount)->intValue;
 
     HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + getWorkspaceFromMonitor(monitor, workspace));
 }
@@ -67,7 +64,7 @@ void mapWorkspacesToMonitors()
     int workspaceIndex = 1;
 
     for (auto& monitor : g_pCompositor->m_vMonitors) {
-        int workspaceCount = g_pConfigManager->getConfigValuePtrSafe(s_workspaceCount)->intValue;
+        int workspaceCount = g_pConfigManager->getConfigValuePtrSafe(k_workspaceCount)->intValue;
         std::string logMessage =
             "[split-monitor-workspaces] Mapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + workspaceCount - 1) + " to monitor " + monitor->szName;
 
@@ -103,7 +100,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 {
     PHANDLE = handle;
 
-    HyprlandAPI::addConfigValue(PHANDLE, s_workspaceCount, SConfigValue{.intValue = 10});
+    HyprlandAPI::addConfigValue(PHANDLE, k_workspaceCount, SConfigValue{.intValue = 10});
 
     HyprlandAPI::addDispatcher(PHANDLE, "split-workspace", monitorWorkspace);
     HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspace", monitorMoveToWorkspace);
