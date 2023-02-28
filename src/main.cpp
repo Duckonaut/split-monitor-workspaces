@@ -123,13 +123,6 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 
 APICALL EXPORT void PLUGIN_EXIT()
 {
-    HyprlandAPI::removeDispatcher(PHANDLE, "split-workspace");
-    HyprlandAPI::removeDispatcher(PHANDLE, "split-movetoworkspace");
-    HyprlandAPI::removeDispatcher(PHANDLE, "split-movetoworkspacesilent");
-
-    HyprlandAPI::unregisterCallback(PHANDLE, e_monitorAddedHandle);
-    HyprlandAPI::unregisterCallback(PHANDLE, e_monitorRemovedHandle);
-
     HyprlandAPI::addNotification(PHANDLE, "[split-monitor-workspaces] Unloaded successfully!", s_pluginColor, 5000);
 
     g_vMonitorWorkspaceMap.clear();
