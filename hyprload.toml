@@ -1,10 +1,10 @@
-[split-plugin-workspaces]
-description = "Split plugin workspaces"
+[split-monitor-workspaces]
+description = "Split monitor workspaces"
 version = "1.0.0"
 author = "Duckonaut"
 
-[split-plugin-workspaces.build]
-output = "split-plugin-workspaces.so"
+[split-monitor-workspaces.build]
+output = "split-monitor-workspaces.so"
 steps = [
     "make all",
 ]
