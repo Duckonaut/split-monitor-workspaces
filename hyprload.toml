@@ -1,0 +1,10 @@
+[split-plugin-workspaces]
+description = "Split plugin workspaces"
+version = "1.0.0"
+author = "Duckonaut"
+
+[split-plugin-workspaces.build]
+output = "split-plugin-workspaces.so"
+steps = [
+    "make all",
+]
