@@ -80,7 +80,7 @@ void mapWorkspacesToMonitors()
                 g_pCompositor->moveWorkspaceToMonitor(workspace, monitor.get());
             }
         }
-
+        HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(workspaceIndex));
         workspaceIndex += workspaceCount;
     }
 }
