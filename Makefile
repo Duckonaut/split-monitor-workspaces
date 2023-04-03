@@ -22,7 +22,7 @@ $(PLUGIN_NAME).so: $(SOURCE_FILES) $(INCLUDE_FILES)
 	g++ -shared -fPIC --no-gnu-unique $(SOURCE_FILES) -o $(PLUGIN_NAME).so -g -I "/usr/include/pixman-1" -I "/usr/include/libdrm" -I "${HYPRLAND_HEADERS}" -Iinclude -std=c++23
 
 clean:
-	rm ./examplePlugin.so
+	rm -f ./$(PLUGIN_NAME).so
 
 clangd:
 	printf "%b" "-I/usr/include/pixman-1\n-I/usr/include/libdrm\n-I${HYPRLAND_HEADERS}\n-Iinclude\n-std=c++2b" > compile_flags.txt

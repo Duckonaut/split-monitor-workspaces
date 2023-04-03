@@ -8,10 +8,13 @@ This ensures the compiler version is the same between the Hyprland build you're 
 The guide on compiling and installing Hyprland manually is on the [wiki](http://wiki.hyprland.org/Getting-Started/Installation/#manual-manual-build)
 
 ## Using [hyprload](https://github.com/Duckonaut/hyprload)
-1. Export the `HYPRLAND_HEADERS` variable to point to the root directory of the Hyprland repo
-    - `export HYPRLAND_HEADERS="$HOME/repos/Hyprland"`
-2. Install
-    - `make install`
+Add the line `"Duckonaut/split-monitor-workspaces",` to your `hyprload.toml` config, like this
+```toml
+plugins = [
+    "Duckonaut/split-monitor-workspaces",
+]
+```
+Then update via the `hyprload,update` dispatcher
 
 ## Manual installation
 1. Export the `HYPRLAND_HEADERS` variable to point to the root directory of the Hyprland repo
