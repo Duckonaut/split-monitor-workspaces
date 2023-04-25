@@ -6,6 +6,14 @@ PLUGIN_NAME=split-monitor-workspaces
 
 SOURCE_FILES=$(wildcard src/*.cpp)
 
+COMPILE_FLAGS=-g -fPIC --no-gnu-unique -std=c++23
+COMPILE_FLAGS+=-I "/usr/include/pixman-1"
+COMPILE_FLAGS+=-I "/usr/include/libdrm"
+COMPILE_FLAGS+=-I "${HYPRLAND_HEADERS}"
+COMPILE_FLAGS+=-I "${HYPRLAND_HEADERS}/subprojects/wlroots/include"
+COMPILE_FLAGS+=-I "${HYPRLAND_HEADERS}/subprojects/wlroots/build/include"
+COMPILE_FLAGS+=-Iinclude
+
 .PHONY: clean clangd
 
 all: check_env $(PLUGIN_NAME).so
@@ -19,7 +27,7 @@ ifndef HYPRLAND_HEADERS
 endif
 
 $(PLUGIN_NAME).so: $(SOURCE_FILES) $(INCLUDE_FILES)
-	g++ -shared -fPIC --no-gnu-unique $(SOURCE_FILES) -o $(PLUGIN_NAME).so -g -I "/usr/include/pixman-1" -I "/usr/include/libdrm" -I "${HYPRLAND_HEADERS}" -Iinclude -std=c++23
+	g++ -shared $(COMPILE_FLAGS) $(SOURCE_FILES) -o $(PLUGIN_NAME).so
 
 clean:
 	rm -f ./$(PLUGIN_NAME).so
