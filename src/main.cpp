@@ -1,12 +1,10 @@
-#define WLR_USE_UNSTABLE
-#include "src/helpers/Color.hpp"
-#include "src/managers/KeybindManager.hpp"
-
-#include "globals.hpp"
-
+#include <src/helpers/Color.hpp>
+#include <src/managers/KeybindManager.hpp>
 #include <src/Compositor.hpp>
 #include <src/config/ConfigManager.hpp>
 #include <src/helpers/Workspace.hpp>
+
+#include "globals.hpp"
 
 #include <algorithm>
 #include <map>

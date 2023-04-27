@@ -10,9 +10,21 @@ COMPILE_FLAGS=-g -fPIC --no-gnu-unique -std=c++23
 COMPILE_FLAGS+=-I "/usr/include/pixman-1"
 COMPILE_FLAGS+=-I "/usr/include/libdrm"
 COMPILE_FLAGS+=-I "${HYPRLAND_HEADERS}"
+COMPILE_FLAGS+=-I "${HYPRLAND_HEADERS}/protocols"
 COMPILE_FLAGS+=-I "${HYPRLAND_HEADERS}/subprojects/wlroots/include"
 COMPILE_FLAGS+=-I "${HYPRLAND_HEADERS}/subprojects/wlroots/build/include"
 COMPILE_FLAGS+=-Iinclude
+
+COMPILE_DEFINES=-DWLR_USE_UNSTABLE
+
+ifeq ($(shell whereis -b jq), "jq:")
+$(error "jq not found. Please install jq.")
+else
+BUILT_WITH_NOXWAYLAND=$(shell hyprctl version -j | jq -r '.flags | .[]' | grep 'no xwayland')
+ifneq ($(BUILT_WITH_NOXWAYLAND),)
+COMPILE_DEFINES+=-DNO_XWAYLAND
+endif
+endif
 
 .PHONY: clean clangd
 
@@ -22,12 +34,13 @@ install: all
 	cp $(PLUGIN_NAME).so ${HOME}/.local/share/hyprload/plugins/bin
 
 check_env:
-ifndef HYPRLAND_HEADERS
-	$(error HYPRLAND_HEADERS is undefined! Please set it to the path to the root of the configured Hyprland repo)
-endif
+	@if [ -z "${HYPRLAND_HEADERS}" ]; then \
+		echo "HYPRLAND_HEADERS not set. Please set it to the root of the hl repo directory."; \
+		exit 1; \
+	fi
 
 $(PLUGIN_NAME).so: $(SOURCE_FILES) $(INCLUDE_FILES)
-	g++ -shared $(COMPILE_FLAGS) $(SOURCE_FILES) -o $(PLUGIN_NAME).so
+	g++ -shared $(COMPILE_FLAGS) $(COMPILE_DEFINES) $(SOURCE_FILES) -o $(PLUGIN_NAME).so
 
 clean:
 	rm -f ./$(PLUGIN_NAME).so
