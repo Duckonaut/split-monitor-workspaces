@@ -1,8 +1,8 @@
-#include <src/helpers/Color.hpp>
-#include <src/managers/KeybindManager.hpp>
-#include <src/Compositor.hpp>
-#include <src/config/ConfigManager.hpp>
-#include <src/helpers/Workspace.hpp>
+#include <hyprland/src/helpers/Color.hpp>
+#include <hyprland/src/managers/KeybindManager.hpp>
+#include <hyprland/src/Compositor.hpp>
+#include <hyprland/src/config/ConfigManager.hpp>
+#include <hyprland/src/helpers/Workspace.hpp>
 
 #include "globals.hpp"
 
