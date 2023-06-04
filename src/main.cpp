@@ -71,7 +71,7 @@ void mapWorkspacesToMonitors()
         for (int i = workspaceIndex; i < workspaceIndex + workspaceCount; i++) {
             std::string workspaceName = std::to_string(i);
             g_vMonitorWorkspaceMap[monitor->ID].push_back(workspaceName);
-            HyprlandAPI::invokeHyprctlCommand("keyword", "wsbind " + workspaceName + "," + monitor->szName);
+            HyprlandAPI::invokeHyprctlCommand("keyword", "workspace " + workspaceName + "," + monitor->szName);
             CWorkspace* workspace = g_pCompositor->getWorkspaceByName(workspaceName);
 
             if (workspace != nullptr) {
