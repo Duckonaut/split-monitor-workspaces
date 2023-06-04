@@ -12,6 +12,8 @@ COMPILE_FLAGS+=-Iinclude
 
 COMPILE_DEFINES=-DWLR_USE_UNSTABLE
 
+INSTALL_LOCATION=${HOME}/.local/share/hyprload/plugins/bin
+
 ifeq ($(shell whereis -b jq), "jq:")
 $(error "jq not found. Please install jq.")
 else
@@ -26,7 +28,8 @@ endif
 all: check_env $(PLUGIN_NAME).so
 
 install: all
-	cp $(PLUGIN_NAME).so ${HOME}/.local/share/hyprload/plugins/bin
+	mkdir -p ${INSTALL_LOCATION}
+	cp $(PLUGIN_NAME).so ${INSTALL_LOCATION}
 
 check_env:
 	@if pkg-config --exists hyprland; then \
