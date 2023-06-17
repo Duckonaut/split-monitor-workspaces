@@ -108,5 +108,32 @@ Keep in mind that if you're using, for example, the `wlr/workspaces` widgets in 
 
 If your workspace-per-monitor count is 10, the first monitor will have workspaces 1-10, the second 11-20 and so on. They will be accessed via numbers 1-10 while your mouse is on a given monitor.
 
+### Example
+
+```
+# in your hyprland config file:
+
+plugin {
+    split-monitor-workspaces {
+        count = 5
+    }
+}
+
+$mainMod = SUPER
+# Switch workspaces with mainMod + [0-5]
+bind = $mainMod, 1, split-workspace, 1
+bind = $mainMod, 2, split-workspace, 2
+bind = $mainMod, 3, split-workspace, 3
+bind = $mainMod, 4, split-workspace, 4
+bind = $mainMod, 5, split-workspace, 5
+
+# Move active window to a workspace with mainMod + SHIFT + [0-5]
+bind = $mainMod SHIFT, 1, split-movetoworkspacesilent, 1
+bind = $mainMod SHIFT, 2, split-movetoworkspacesilent, 2
+bind = $mainMod SHIFT, 3, split-movetoworkspacesilent, 3
+bind = $mainMod SHIFT, 4, split-movetoworkspacesilent, 4
+bind = $mainMod SHIFT, 5, split-movetoworkspacesilent, 5
+```
+
 # Special thanks
 - [hyprsome](https://github.com/sopa0/hyprsome): An earlier project of similar nature
