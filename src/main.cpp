@@ -1,8 +1,8 @@
-#include <hyprland/src/helpers/Color.hpp>
-#include <hyprland/src/managers/KeybindManager.hpp>
 #include <hyprland/src/Compositor.hpp>
 #include <hyprland/src/config/ConfigManager.hpp>
+#include <hyprland/src/helpers/Color.hpp>
 #include <hyprland/src/helpers/Workspace.hpp>
+#include <hyprland/src/managers/KeybindManager.hpp>
 
 #include "globals.hpp"
 
@@ -22,16 +22,25 @@ static HOOK_CALLBACK_FN* e_monitorRemovedHandle = nullptr;
 
 const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string& workspace)
 {
-    int workspaceIndex = std::stoi(workspace);
-    if (workspaceIndex - 1 < 0) {
+    int workspaceIndex = 0;
+    try {
+        // convert to 0-indexed int
+        workspaceIndex = std::stoi(workspace) - 1;
+    }
+    catch (std::invalid_argument) {
+        Debug::log(WARN, "Invalid workspace index: %s", workspace.c_str());
         return workspace;
     }
 
-    if (workspaceIndex - 1 >= g_vMonitorWorkspaceMap[monitor->ID].size()) {
+    if (workspaceIndex < 0) {
         return workspace;
     }
 
-    return g_vMonitorWorkspaceMap[monitor->ID][workspaceIndex - 1];
+    if (workspaceIndex >= g_vMonitorWorkspaceMap[monitor->ID].size()) {
+        return workspace;
+    }
+
+    return g_vMonitorWorkspaceMap[monitor->ID][workspaceIndex];
 }
 
 void monitorWorkspace(std::string workspace)
