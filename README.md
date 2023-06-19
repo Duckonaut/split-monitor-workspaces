@@ -40,7 +40,9 @@ It also provides the following config values
 
 Keep in mind that if you're using, for example, the `wlr/workspaces` widgets in [waybar](https://github.com/Alexays/Waybar), this will require a change to your config. You should set `all-outputs` to `false`, and adjust the icon mapping.
 
-If your workspace-per-monitor count is 10, the first monitor will have workspaces 1-10, the second 11-20 and so on. They will be accessed via numbers 1-10 while your mouse is on a given monitor.
+# Workings
+When you are on monitor `(ID=N)` and want to move to workspace `W`,
+the actual workspace you go to is given by `(W - 1) * monitors + N + 1`.
 
 # Special thanks
 - [hyprsome](https://github.com/sopa0/hyprsome): An earlier project of similar nature
