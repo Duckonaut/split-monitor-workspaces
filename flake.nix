@@ -11,9 +11,9 @@
       split-monitor-workspaces = pkgs.stdenv.mkDerivation {
         pname = "split-monitor-workspaces";
         version = "0.1";
-        src = ./src;
+        src = ./.;
 
-        nativeBuildInputs = with pkgs; [ meson pkg-config ];
+        nativeBuildInputs = with pkgs; [ meson ninja pkg-config ];
 
         buildInputs = with pkgs; [
           hyprland.packages.${system}.hyprland.dev
