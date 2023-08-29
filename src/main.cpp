@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <hyprland/src/Compositor.hpp>
 #include <hyprland/src/config/ConfigManager.hpp>
 #include <hyprland/src/helpers/Color.hpp>
@@ -27,7 +28,7 @@ const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string&
         // convert to 0-indexed int
         workspaceIndex = std::stoi(workspace) - 1;
     }
-    catch (std::invalid_argument) {
+    catch (std::invalid_argument&) {
         Debug::log(WARN, "Invalid workspace index: %s", workspace.c_str());
         return workspace;
     }
@@ -36,7 +37,7 @@ const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string&
         return workspace;
     }
 
-    if (workspaceIndex >= g_vMonitorWorkspaceMap[monitor->ID].size()) {
+    if ((size_t)workspaceIndex >= g_vMonitorWorkspaceMap[monitor->ID].size()) {
         return workspace;
     }
 
