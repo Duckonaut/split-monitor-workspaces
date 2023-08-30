@@ -1,25 +1,44 @@
 {
   inputs = {
     hyprland.url = "github:hyprwm/Hyprland";
+    nix-filter.url = "github:numtide/nix-filter";
   };
 
-  outputs = { self, hyprland, ... }: let
+  outputs = {
+    self,
+    hyprland,
+    nix-filter,
+    ...
+  }: let
     inherit (hyprland.inputs) nixpkgs;
-    hyprlandSystems = fn: nixpkgs.lib.genAttrs (builtins.attrNames hyprland.packages) (system: fn system nixpkgs.legacyPackages.${system});
+    forHyprlandSystems = fn: nixpkgs.lib.genAttrs (builtins.attrNames hyprland.packages) (system: fn system nixpkgs.legacyPackages.${system});
   in {
-    packages = hyprlandSystems (system: pkgs: rec {
+    packages = forHyprlandSystems (system: pkgs: rec {
       split-monitor-workspaces = pkgs.stdenv.mkDerivation {
         pname = "split-monitor-workspaces";
         version = "0.1";
-        src = ./.;
+        src = nix-filter.lib {
+          root = ./.;
+          include = [
+            "src"
+            "include"
+            ./Makefile
+            ./meson.build
+          ];
+        };
 
-        nativeBuildInputs = with pkgs; [ meson ninja pkg-config ];
+        # allow overriding xwayland support
+        BUILT_WITH_NOXWAYLAND = false;
 
-        buildInputs = with pkgs; [
-          hyprland.packages.${system}.hyprland.dev
-          pango
-          cairo
-        ] ++ hyprland.packages.${system}.hyprland.buildInputs;
+        nativeBuildInputs = with pkgs; [meson ninja pkg-config];
+
+        buildInputs = with pkgs;
+          [
+            hyprland.packages.${system}.hyprland.dev
+            pango
+            cairo
+          ]
+          ++ hyprland.packages.${system}.hyprland.buildInputs;
 
         meta = with pkgs.lib; {
           homepage = "https://github.com/Duckonaut/split-monitor-workspaces";
@@ -32,7 +51,7 @@
       default = split-monitor-workspaces;
     });
 
-    devShells = hyprlandSystems (system: pkgs: {
+    devShells = forHyprlandSystems (system: pkgs: {
       default = pkgs.mkShell {
         name = "split-monitor-workspaces";
 
@@ -41,7 +60,7 @@
           bear
         ];
 
-        inputsFrom = [ self.packages.${system}.split-monitor-workspaces ];
+        inputsFrom = [self.packages.${system}.split-monitor-workspaces];
       };
     });
   };
