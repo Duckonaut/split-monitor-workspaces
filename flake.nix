@@ -14,7 +14,7 @@
     forHyprlandSystems = fn: nixpkgs.lib.genAttrs (builtins.attrNames hyprland.packages) (system: fn system nixpkgs.legacyPackages.${system});
   in {
     packages = forHyprlandSystems (system: pkgs: rec {
-      split-monitor-workspaces = pkgs.stdenv.mkDerivation {
+      split-monitor-workspaces = pkgs.gcc13Stdenv.mkDerivation {
         pname = "split-monitor-workspaces";
         version = "0.1";
         src = nix-filter.lib {
