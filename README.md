@@ -100,9 +100,10 @@ The plugin provides drop-in replacements for workspace-related commands
 | movetoworkspacesilent | split-movetoworkspacesilent   |
 
 It also provides the following config values
-| Name                                      | Type      | Default   | Description                                   |
-|-------------------------------------------|-----------|-----------|-----------------------------------------------|
-| `plugin:split-monitor-workspaces:count`   | int       | 10        | How many workspaces to bind to the monitor    |
+| Name                                             | Type      | Default   | Description                                           |
+|--------------------------------------------------|-----------|-----------|-------------------------------------------------------|
+| `plugin:split-monitor-workspaces:count`          | int       | 10        | How many workspaces to bind to the monitor            |
+| `plugin:split-monitor-workspaces:keep_focused`   | boolean   | 0         | Keep current workspaces focused on plugin init/reload |
 
 Keep in mind that if you're using, for example, the `wlr/workspaces` widgets in [waybar](https://github.com/Alexays/Waybar), this will require a change to your config. You should set `all-outputs` to `false`, and adjust the icon mapping.
 
