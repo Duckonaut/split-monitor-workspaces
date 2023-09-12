@@ -14,6 +14,7 @@
 #include <vector>
 
 const std::string k_workspaceCount = "plugin:split-monitor-workspaces:count";
+const std::string k_keepFocused = "plugin:split-monitor-workspaces:keep_focused";
 const CColor s_pluginColor = {0x61 / 255.0f, 0xAF / 255.0f, 0xEF / 255.0f, 1.0f};
 
 std::map<uint64_t, std::vector<std::string>> g_vMonitorWorkspaceMap;
@@ -71,6 +72,8 @@ void mapWorkspacesToMonitors()
 
     int workspaceIndex = 1;
 
+    int keepFocused = g_pConfigManager->getConfigValuePtrSafe(k_keepFocused)->intValue;
+
     for (auto& monitor : g_pCompositor->m_vMonitors) {
         int workspaceCount = g_pConfigManager->getConfigValuePtrSafe(k_workspaceCount)->intValue;
         std::string logMessage =
@@ -88,7 +91,10 @@ void mapWorkspacesToMonitors()
                 g_pCompositor->moveWorkspaceToMonitor(workspace, monitor.get());
             }
         }
-        HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(workspaceIndex));
+
+        if (!keepFocused) {
+            HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(workspaceIndex));
+        }
         workspaceIndex += workspaceCount;
     }
 }
@@ -109,6 +115,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     PHANDLE = handle;
 
     HyprlandAPI::addConfigValue(PHANDLE, k_workspaceCount, SConfigValue{.intValue = 10});
+    HyprlandAPI::addConfigValue(PHANDLE, k_keepFocused, SConfigValue{.intValue = 0});
 
     HyprlandAPI::addDispatcher(PHANDLE, "split-workspace", monitorWorkspace);
     HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspace", monitorMoveToWorkspace);
