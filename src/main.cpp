@@ -45,27 +45,63 @@ const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string&
     return g_vMonitorWorkspaceMap[monitor->ID][workspaceIndex];
 }
 
-void monitorWorkspace(std::string workspace)
+void splitWorkspace(std::string workspace)
 {
     CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
 
     HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + getWorkspaceFromMonitor(monitor, workspace));
 }
 
-void monitorMoveToWorkspace(std::string workspace)
+void splitMoveToWorkspace(std::string workspace)
 {
     CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
 
     HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + getWorkspaceFromMonitor(monitor, workspace));
 }
 
-void monitorMoveToWorkspaceSilent(std::string workspace)
+void splitMoveToWorkspaceSilent(std::string workspace)
 {
     CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
 
     HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + getWorkspaceFromMonitor(monitor, workspace));
 }
 
+void changeMonitor(bool quiet, std::string value)
+{
+    CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
+
+    CMonitor* nextMonitor = nullptr;
+
+    if (value == "next" || value == "+1") {
+        nextMonitor = g_pCompositor->getMonitorFromID(monitor->ID + 1);
+    }
+    else if (value == "prev" || value == "-1") {
+        nextMonitor = g_pCompositor->getMonitorFromID(monitor->ID - 1);
+    }
+    else {
+        Debug::log(WARN, "Invalid monitor value: %s", value.c_str());
+        return;
+    }
+
+    int nextWorkspace = nextMonitor->activeWorkspace;
+
+    if (quiet) {
+        HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + std::to_string(nextWorkspace));
+    }
+    else {
+        HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + std::to_string(nextWorkspace));
+    }
+}
+
+void splitChangeMonitorSilent(std::string value)
+{
+    changeMonitor(true, value);
+}
+
+void splitChangeMonitor(std::string value)
+{
+    changeMonitor(false, value);
+}
 void mapWorkspacesToMonitors()
 {
     g_vMonitorWorkspaceMap.clear();
@@ -117,9 +153,11 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addConfigValue(PHANDLE, k_workspaceCount, SConfigValue{.intValue = 10});
     HyprlandAPI::addConfigValue(PHANDLE, k_keepFocused, SConfigValue{.intValue = 0});
 
-    HyprlandAPI::addDispatcher(PHANDLE, "split-workspace", monitorWorkspace);
-    HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspace", monitorMoveToWorkspace);
-    HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspacesilent", monitorMoveToWorkspaceSilent);
+    HyprlandAPI::addDispatcher(PHANDLE, "split-workspace", splitWorkspace);
+    HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspace", splitMoveToWorkspace);
+    HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspacesilent", splitMoveToWorkspaceSilent);
+    HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitor", splitChangeMonitor);
+    HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitorsilent", splitChangeMonitorSilent);
 
     HyprlandAPI::reloadConfig();
 
