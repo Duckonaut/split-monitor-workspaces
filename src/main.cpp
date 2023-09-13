@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstdint>
 #include <hyprland/src/Compositor.hpp>
 #include <hyprland/src/config/ConfigManager.hpp>
 #include <hyprland/src/helpers/Color.hpp>
@@ -72,16 +73,28 @@ void changeMonitor(bool quiet, std::string value)
 
     CMonitor* nextMonitor = nullptr;
 
+    uint64_t monitorCount = g_pCompositor->m_vMonitors.size();
+
+    int delta = 0;
+
     if (value == "next" || value == "+1") {
-        nextMonitor = g_pCompositor->getMonitorFromID(monitor->ID + 1);
+        delta = 1;
     }
     else if (value == "prev" || value == "-1") {
-        nextMonitor = g_pCompositor->getMonitorFromID(monitor->ID - 1);
+        delta = -1;
     }
     else {
         Debug::log(WARN, "Invalid monitor value: %s", value.c_str());
         return;
     }
+
+    int nextMonitorIndex = (monitor->ID + delta) % monitorCount;
+
+    if (nextMonitorIndex < 0) {
+        nextMonitorIndex += monitorCount;
+    }
+
+    nextMonitor = g_pCompositor->m_vMonitors[nextMonitorIndex].get();
 
     int nextWorkspace = nextMonitor->activeWorkspace;
 
