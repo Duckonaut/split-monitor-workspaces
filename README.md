@@ -1,6 +1,9 @@
 # split-monitor-workspaces
 A small plugin to provide `awesome`/`dwm`-like behavior with workspaces: split them between monitors and provide independent numbering
 
+# Requirements
+- Hyprland >= v0.31.0
+
 # Installing
 Since Hyprland plugins don't have ABI guarantees, you *should* download the Hyprland source and compile it if you plan to use plugins.
 This ensures the compiler version is the same between the Hyprland build you're running, and the plugins you are using.
