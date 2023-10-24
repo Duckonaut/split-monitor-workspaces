@@ -7,6 +7,7 @@
 #include <hyprland/src/managers/KeybindManager.hpp>
 
 #include "globals.hpp"
+#include "hyprland/src/SharedDefs.hpp"
 
 #include <algorithm>
 #include <map>
@@ -148,7 +149,7 @@ void mapWorkspacesToMonitors()
     }
 }
 
-void refreshMapping(void*, std::any value)
+void refreshMapping(void*, SCallbackInfo&, std::any)
 {
     mapWorkspacesToMonitors();
 }
