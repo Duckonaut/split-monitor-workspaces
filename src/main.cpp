@@ -32,7 +32,7 @@ const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string&
         workspaceIndex = std::stoi(workspace) - 1;
     }
     catch (std::invalid_argument&) {
-        Debug::log(WARN, "Invalid workspace index: %s", workspace.c_str());
+        Debug::log(WARN, "Invalid workspace index: {}", workspace);
         return workspace;
     }
 
@@ -85,7 +85,7 @@ void changeMonitor(bool quiet, std::string value)
         delta = -1;
     }
     else {
-        Debug::log(WARN, "Invalid monitor value: %s", value.c_str());
+        Debug::log(WARN, "Invalid monitor value: {}", value);
         return;
     }
 
