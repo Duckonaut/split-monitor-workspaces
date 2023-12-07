@@ -125,12 +125,12 @@ void mapWorkspacesToMonitors()
     for (auto& monitor : g_pCompositor->m_vMonitors) {
         int workspaceCount = g_pConfigManager->getConfigValuePtrSafe(k_workspaceCount)->intValue;
         int fromWorkspace = monitor->ID * workspaceCount + 1;
-        int toWorkspace = (monitor->ID + 1) * workspaceCount + 1;
-        std::string logMessage = "[split-monitor-workspaces] Mapping workspaces " + std::to_string(fromWorkspace) + "-" + std::to_string(toWorkspace - 1) + " to monitor " + monitor->szName;
+        int toWorkspace = (monitor->ID + 1) * workspaceCount;
+        std::string logMessage = "[split-monitor-workspaces] Mapping workspaces " + std::to_string(fromWorkspace) + "-" + std::to_string(toWorkspace) + " to monitor " + monitor->szName;
 
         HyprlandAPI::addNotification(PHANDLE, logMessage, s_pluginColor, 5000);
 
-        for (int i = fromWorkspace; i < toWorkspace; i++) {
+        for (int i = fromWorkspace; i <= toWorkspace; i++) {
             std::string workspaceName = std::to_string(i);
             g_vMonitorWorkspaceMap[monitor->ID].push_back(workspaceName);
             HyprlandAPI::invokeHyprctlCommand("keyword", "workspace " + workspaceName + "," + monitor->szName);
