@@ -28,6 +28,10 @@ Then update via the `hyprload,update` dispatcher
 3. Add this line to the bottom of your hyprland config
     - `exec-once=hyprctl plugin load <ABSOLUTE PATH TO split-monitor-workspaces.so>`
 
+## Using the AUR
+Use your prefered method to install packages from the aur to get `hyprdwl` which will automaticly create a hook when hyprland updates to rubuild.
+This is was not made by The Owner of this repo this was a thrid party.
+
 ## NixOS installation
 
 With flakes enabled, a sample installation will look like this:
