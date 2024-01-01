@@ -1,5 +1,5 @@
 [repository]
-name = "Split Monitor Workspaces"
+name = "Split-Monitor-Workspaces"
 authors = ["Duckonaut"]
 
 [split-monitor-workspaces]
