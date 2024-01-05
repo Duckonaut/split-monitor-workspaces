@@ -10,6 +10,14 @@ This ensures the compiler version is the same between the Hyprland build you're 
 
 The guide on compiling and installing Hyprland manually is on the [wiki](http://wiki.hyprland.org/Getting-Started/Installation/#manual-manual-build)
 
+## Using [hyprpm](https://wiki.hyprland.org/Plugins/Using-Plugins/#hyprpm)
+Hyprpm is a tool integrated with the latest Hyprland version, to use it first you'll need to add the repository and then enable the plugin
+```BASH
+hyprpm add https://github.com/Duckonaut/split-monitor-workspaces # Add the plugin repository
+hyprpm enable split-monitor-workspaces # Enable the plugin
+hyprpm reload # Reload the plugins
+```
+
 ## Using [hyprload](https://github.com/Duckonaut/hyprload)
 Add the line `"Duckonaut/split-monitor-workspaces",` to your `hyprload.toml` config, like this
 ```toml
