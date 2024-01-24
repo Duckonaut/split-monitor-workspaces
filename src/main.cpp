@@ -107,6 +107,40 @@ void changeMonitor(bool quiet, std::string value)
     }
 }
 
+void splitFocusMonitor(std::string value)
+{
+    CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
+
+    CMonitor* nextMonitor = nullptr;
+
+    uint64_t monitorCount = g_pCompositor->m_vMonitors.size();
+
+    int delta = 0;
+
+    if (value == "next" || value == "+1") {
+        delta = 1;
+    }
+    else if (value == "prev" || value == "-1") {
+        delta = -1;
+    }
+    else {
+        Debug::log(WARN, "Invalid monitor value: %s", value.c_str());
+        return;
+    }
+
+    int nextMonitorIndex = (monitor->ID + delta) % monitorCount;
+
+    if (nextMonitorIndex < 0) {
+        nextMonitorIndex += monitorCount;
+    }
+
+    nextMonitor = g_pCompositor->m_vMonitors[nextMonitorIndex].get();
+
+    int nextWorkspace = nextMonitor->activeWorkspace;
+
+    HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(nextWorkspace));
+}
+
 void splitChangeMonitorSilent(std::string value)
 {
     changeMonitor(true, value);
@@ -171,6 +205,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspace", splitMoveToWorkspace);
     HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspacesilent", splitMoveToWorkspaceSilent);
     HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitor", splitChangeMonitor);
+    HyprlandAPI::addDispatcher(PHANDLE, "split-focusmonitor", splitFocusMonitor);
     HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitorsilent", splitChangeMonitorSilent);
 
     HyprlandAPI::reloadConfig();
