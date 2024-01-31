@@ -89,11 +89,7 @@ void changeMonitor(bool quiet, std::string value)
         return;
     }
 
-    int nextMonitorIndex = (monitor->ID + delta) % monitorCount;
-
-    if (nextMonitorIndex < 0) {
-        nextMonitorIndex += monitorCount;
-    }
+    int nextMonitorIndex = (monitorCount + monitor->ID + delta) % monitorCount;
 
     nextMonitor = g_pCompositor->m_vMonitors[nextMonitorIndex].get();
 
