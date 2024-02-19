@@ -122,10 +122,13 @@ void mapWorkspacesToMonitors()
 
     int workspaceIndex = 1;
 
-    int keepFocused = g_pConfigManager->getConfigValuePtrSafe(k_keepFocused)->intValue;
+    static auto* const workspaceCountPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_workspaceCount)->getDataStaticPtr();
+    static auto* const keepFocusedPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_keepFocused)->getDataStaticPtr();
+
+    int keepFocused = **keepFocusedPtr;
+    int workspaceCount = **workspaceCountPtr;
 
     for (auto& monitor : g_pCompositor->m_vMonitors) {
-        int workspaceCount = g_pConfigManager->getConfigValuePtrSafe(k_workspaceCount)->intValue;
         std::string logMessage =
             "[split-monitor-workspaces] Mapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + workspaceCount - 1) + " to monitor " + monitor->szName;
 
@@ -164,8 +167,8 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 {
     PHANDLE = handle;
 
-    HyprlandAPI::addConfigValue(PHANDLE, k_workspaceCount, SConfigValue{.intValue = 10});
-    HyprlandAPI::addConfigValue(PHANDLE, k_keepFocused, SConfigValue{.intValue = 0});
+    HyprlandAPI::addConfigValue(PHANDLE, k_workspaceCount, Hyprlang::INT{10});
+    HyprlandAPI::addConfigValue(PHANDLE, k_keepFocused, Hyprlang::INT{0});
 
     HyprlandAPI::addDispatcher(PHANDLE, "split-workspace", splitWorkspace);
     HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspace", splitMoveToWorkspace);
