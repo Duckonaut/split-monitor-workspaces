@@ -122,16 +122,16 @@ void mapWorkspacesToMonitors()
 
     int workspaceIndex = 1;
 
-    auto keepFocused = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_keepFocused)->getDataStaticPtr();
+    auto* keepFocused = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_keepFocused)->getDataStaticPtr();
 
     for (auto& monitor : g_pCompositor->m_vMonitors) {
-        auto workspaceCount = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_workspaceCount)->getDataStaticPtr();
+        auto* workspaceCount = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_workspaceCount)->getDataStaticPtr();
         std::string logMessage =
-            "[split-monitor-workspaces] Mapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + workspaceCount - 1) + " to monitor " + monitor->szName;
+            "[split-monitor-workspaces] Mapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + **workspaceCount - 1) + " to monitor " + monitor->szName;
 
         HyprlandAPI::addNotification(PHANDLE, logMessage, s_pluginColor, 5000);
 
-        for (int i = workspaceIndex; i < workspaceIndex + workspaceCount; i++) {
+        for (int i = workspaceIndex; i < workspaceIndex + **workspaceCount; i++) {
             std::string workspaceName = std::to_string(i);
             g_vMonitorWorkspaceMap[monitor->ID].push_back(workspaceName);
             HyprlandAPI::invokeHyprctlCommand("keyword", "workspace " + workspaceName + "," + monitor->szName);
@@ -145,7 +145,7 @@ void mapWorkspacesToMonitors()
         if (!keepFocused) {
             HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(workspaceIndex));
         }
-        workspaceIndex += workspaceCount;
+        workspaceIndex += **workspaceCount;
     }
 }
 
