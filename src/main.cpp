@@ -122,10 +122,10 @@ void mapWorkspacesToMonitors()
 
     int workspaceIndex = 1;
 
-    auto keepFocused = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(k_keepFocused)->getDataStaticPtr();
+    auto keepFocused = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_keepFocused)->getDataStaticPtr();
 
     for (auto& monitor : g_pCompositor->m_vMonitors) {
-        auto workspaceCount = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(k_workspaceCount)->getDataStaticPtr();
+        auto workspaceCount = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_workspaceCount)->getDataStaticPtr();
         std::string logMessage =
             "[split-monitor-workspaces] Mapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + workspaceCount - 1) + " to monitor " + monitor->szName;
 
