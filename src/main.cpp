@@ -164,8 +164,8 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 {
     PHANDLE = handle;
 
-    HyprlandAPI::addConfigValue(PHANDLE, k_workspaceCount, SConfigValue{.intValue = 10});
-    HyprlandAPI::addConfigValue(PHANDLE, k_keepFocused, SConfigValue{.intValue = 0});
+    HyprlandAPI::addConfigValue(PHANDLE, k_workspaceCount, Hyprlang::INT{10});
+    HyprlandAPI::addConfigValue(PHANDLE, k_keepFocused, Hyprlang::INT{0});
 
     HyprlandAPI::addDispatcher(PHANDLE, "split-workspace", splitWorkspace);
     HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspace", splitMoveToWorkspace);
