@@ -2,4 +2,5 @@ build/
 .cache/
 *.so
 compile_flags.txt
+compile_commands.json
 result/ 
