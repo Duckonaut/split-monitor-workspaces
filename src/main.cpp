@@ -192,8 +192,8 @@ void mapWorkspacesToMonitors()
             HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(workspaceIndex));
         }
     }
-    fixWorkspaceArrangement();
     writeWorkspaceRules(workspaceRules);
+    HyprlandAPI::reloadConfig();
 }
 
 void refreshMapping(void*, SCallbackInfo&, std::any)
