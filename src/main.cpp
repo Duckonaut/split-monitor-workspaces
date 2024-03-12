@@ -9,9 +9,7 @@
 #include "globals.hpp"
 #include "hyprland/src/SharedDefs.hpp"
 
-#include <algorithm>
 #include <map>
-#include <thread>
 #include <unistd.h>
 #include <vector>
 
@@ -125,12 +123,12 @@ void writeWorkspaceRules(std::vector<std::string> const& rules)
         std::ofstream file;
         file.open("/tmp/hyprland-workspace-rules", std::ios::out | std::ios::trunc);
         if (rules.empty()) { // clear the file
-            file << std::endl;
+            file << '\n';
             file.close();
             return;
         }
         for (const auto& rule : rules) {
-            file << rule << std::endl;
+            file << rule << '\n';
         }
         file.close();
     }
@@ -146,9 +144,18 @@ void fixWorkspaceArrangement()
         for (auto& workspace : monitor.second) {
             CWorkspace* workspacePtr = g_pCompositor->getWorkspaceByName(workspace);
             if (workspacePtr != nullptr) {
-                g_pCompositor->moveWorkspaceToMonitor(workspacePtr, g_pCompositor->getMonitorFromID(monitor.first));
+                auto* const monitorPtr = g_pCompositor->getMonitorFromID(monitor.first);
+                if (monitorPtr == nullptr) {
+                    Debug::log(WARN, "[split-monitor-workspaces] fixWorkspaceArrangement: Monitor not found: {}", monitor.first);
+                    continue;
+                }
+                g_pCompositor->moveWorkspaceToMonitor(workspacePtr, monitorPtr);
+            } else {
+                Debug::log(WARN, "[split-monitor-workspaces] fixWorkspaceArrangement: Workspace not found: {}", workspace);
             }
         }
+        // focus this monitor's first workspace
+        HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + monitor.second[0]);
     }
 }
 
@@ -156,8 +163,19 @@ void mapWorkspacesToMonitors()
 {
     g_vMonitorWorkspaceMap.clear();
 
-    static auto* const workspaceCountPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_workspaceCount)->getDataStaticPtr();
-    static auto* const keepFocusedPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_keepFocused)->getDataStaticPtr();
+    static const auto* const workspaceCountPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_workspaceCount)->getDataStaticPtr();
+    static const auto* const keepFocusedPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_keepFocused)->getDataStaticPtr();
+
+    if (workspaceCountPtr == nullptr)
+    {
+        Debug::log(WARN, "[split-monitor-workspaces] Failed to get workspace count config value");
+        return;
+    }
+    if (keepFocusedPtr == nullptr)
+    {
+        Debug::log(WARN, "[split-monitor-workspaces] Failed to get keep focused config value");
+        return;
+    }
 
     int keepFocused = **keepFocusedPtr;
     int workspaceCount = **workspaceCountPtr;
@@ -188,7 +206,7 @@ void mapWorkspacesToMonitors()
             workspaceRules.emplace_back("workspace = " + workspaceName + ",monitor:" + monitor->szName + ",persistent:true");
         }
 
-        if (!keepFocused) {
+        if (keepFocused == 0) {
             HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(workspaceIndex));
         }
     }
