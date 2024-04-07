@@ -2,7 +2,7 @@
 name = "split-monitor-workspaces"
 authors = ["Duckonaut", "zjeffer"]
 commit_pins = [
-    ["360ede79d124ffdeebbe8401f1ac4bc0dbec2c91", "e05ca9d77a67a43244650d4afbe63b173214e9d8"]  # 0.38.1
+    ["360ede79d124ffdeebbe8401f1ac4bc0dbec2c91", "f7a306396da163422048fd38eecd92c68ce21e58"]  # 0.38.1
 ]
 
 [split-monitor-workspaces]
