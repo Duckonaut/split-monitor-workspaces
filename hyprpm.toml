@@ -1,6 +1,9 @@
 [repository]
 name = "split-monitor-workspaces"
-authors = ["Duckonaut"]
+authors = ["Duckonaut", "zjeffer"]
+commit_pins = [
+    ["360ede79d124ffdeebbe8401f1ac4bc0dbec2c91", "e05ca9d77a67a43244650d4afbe63b173214e9d8"]  # 0.38.1
+]
 
 [split-monitor-workspaces]
 description = "Split monitor workspaces"
