@@ -15,7 +15,7 @@
 
 const std::string k_workspaceCount = "plugin:split-monitor-workspaces:count";
 const std::string k_keepFocused = "plugin:split-monitor-workspaces:keep_focused";
-const CColor s_pluginColor = {0x61 / 255.0f, 0xAF / 255.0f, 0xEF / 255.0f, 1.0f};
+const CColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
 
 std::map<uint64_t, std::vector<std::string>> g_vMonitorWorkspaceMap;
 
@@ -46,28 +46,28 @@ const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string&
     return g_vMonitorWorkspaceMap[monitor->ID][workspaceIndex];
 }
 
-void splitWorkspace(std::string workspace)
+void splitWorkspace(const std::string& workspace)
 {
     CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
 
     HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + getWorkspaceFromMonitor(monitor, workspace));
 }
 
-void splitMoveToWorkspace(std::string workspace)
+void splitMoveToWorkspace(const std::string& workspace)
 {
     CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
 
     HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + getWorkspaceFromMonitor(monitor, workspace));
 }
 
-void splitMoveToWorkspaceSilent(std::string workspace)
+void splitMoveToWorkspaceSilent(const std::string& workspace)
 {
     CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
 
     HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + getWorkspaceFromMonitor(monitor, workspace));
 }
 
-void changeMonitor(bool quiet, std::string value)
+void changeMonitor(bool quiet, const std::string& value)
 {
     CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
 
@@ -106,12 +106,12 @@ void changeMonitor(bool quiet, std::string value)
     }
 }
 
-void splitChangeMonitorSilent(std::string value)
+void splitChangeMonitorSilent(const std::string& value)
 {
     changeMonitor(true, value);
 }
 
-void splitChangeMonitor(std::string value)
+void splitChangeMonitor(const std::string& value)
 {
     changeMonitor(false, value);
 }
@@ -214,12 +214,12 @@ void mapWorkspacesToMonitors()
     HyprlandAPI::reloadConfig();
 }
 
-void refreshMapping(void*, SCallbackInfo&, std::any)
+void refreshMapping(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/)
 {
     mapWorkspacesToMonitors();
 }
 
-void configReloadedCallback(void*, SCallbackInfo&, std::any)
+void configReloadedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/)
 {
     // anything you call in this function should not reload the config, as it will cause an infinite loop
     Debug::log(INFO, "[split-monitor-workspaces] Config reloaded");
