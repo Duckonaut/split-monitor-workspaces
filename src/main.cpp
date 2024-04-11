@@ -2,8 +2,8 @@
 #include <cstdint>
 #include <hyprland/src/Compositor.hpp>
 #include <hyprland/src/config/ConfigManager.hpp>
-#include <hyprland/src/helpers/Color.hpp>
 #include <hyprland/src/desktop/Workspace.hpp>
+#include <hyprland/src/helpers/Color.hpp>
 #include <hyprland/src/managers/KeybindManager.hpp>
 
 #include "globals.hpp"
@@ -150,7 +150,8 @@ void fixWorkspaceArrangement()
                     continue;
                 }
                 g_pCompositor->moveWorkspaceToMonitor(workspacePtr, monitorPtr);
-            } else {
+            }
+            else {
                 Debug::log(WARN, "[split-monitor-workspaces] fixWorkspaceArrangement: Workspace not found: {}", workspace);
             }
         }
@@ -166,13 +167,11 @@ void mapWorkspacesToMonitors()
     static const auto* const workspaceCountPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_workspaceCount)->getDataStaticPtr();
     static const auto* const keepFocusedPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_keepFocused)->getDataStaticPtr();
 
-    if (workspaceCountPtr == nullptr)
-    {
+    if (workspaceCountPtr == nullptr) {
         Debug::log(WARN, "[split-monitor-workspaces] Failed to get workspace count config value");
         return;
     }
-    if (keepFocusedPtr == nullptr)
-    {
+    if (keepFocusedPtr == nullptr) {
         Debug::log(WARN, "[split-monitor-workspaces] Failed to get keep focused config value");
         return;
     }
