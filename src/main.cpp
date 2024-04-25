@@ -25,13 +25,34 @@ static std::shared_ptr<HOOK_CALLBACK_FN> e_configReloadedHandle = nullptr;
 
 const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string& workspace)
 {
+    // if the workspace is "empty", we expect the new ID to be the next available ID on the given monitor (not the next ID in the list)
+    if (workspace == "empty") {
+        // get the next workspace ID that is empty on this monitor
+        PHLWORKSPACE activeWorkspace = monitor->activeWorkspace;
+        for (const auto& workspaceName : g_vMonitorWorkspaceMap[monitor->ID]) {
+            PHLWORKSPACE workspacePtr = g_pCompositor->getWorkspaceByName(workspaceName);
+            if (workspacePtr == activeWorkspace) {
+                // skip the currently active workspace
+                continue;
+            }
+            // the workspace we want is either not yet created (=nullptr) or already created but empty (!= nullptr but no windows)
+            if (workspacePtr == nullptr || g_pCompositor->getWindowsOnWorkspace(workspacePtr->m_iID) == 0) {
+                return workspaceName;
+            }
+        }
+        // if not yet returned, we just return the last workspace in the map
+        return g_vMonitorWorkspaceMap[monitor->ID].back();
+    }
+
+    // otherwise, try to parse the workspace as an integer
     int workspaceIndex = 0;
     try {
         // convert to 0-indexed int
         workspaceIndex = std::stoi(workspace) - 1;
     }
     catch (std::invalid_argument&) {
-        Debug::log(WARN, "[split-monitor-workspaces] Invalid workspace index: %s", workspace.c_str());
+        // if parsing fails, assume the user wants to switch to the workspace by name
+        Debug::log(WARN, "[split-monitor-workspaces] Invalid workspace index: {}", workspace.c_str());
         return workspace;
     }
 
@@ -84,7 +105,7 @@ void changeMonitor(bool quiet, const std::string& value)
         delta = -1;
     }
     else {
-        Debug::log(WARN, "[split-monitor-workspaces] Invalid monitor value: %s", value.c_str());
+        Debug::log(WARN, "[split-monitor-workspaces] Invalid monitor value: {}", value.c_str());
         return;
     }
 
