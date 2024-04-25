@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  schedule:
+    # run every night at 2AM (the base docker image is updated at midnight)
+    - cron: '0 2 * * *' 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      # image built from the Dockerfile in the .github/ folder
+      image: duckonaut/hyprland-arch:latest
+    steps:
+    - name: Install dependencies
+      # TODO: remove hyprwayland-scanner-git once hyprland-git properly depends on it
+      run: |
+        sudo -u user sh -c "paru -Syu --noconfirm hyprwayland-scanner-git hyprland-git"
+
+    - name: Checkout current repository
+      uses: actions/checkout@v4
+
+    - name: Build current repository
+      run: |
+        meson setup build --wipe
+        ninja -C build
