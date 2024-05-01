@@ -109,7 +109,12 @@ void changeMonitor(bool quiet, const std::string& value)
         return;
     }
 
-    int nextMonitorIndex = (monitorCount + monitor->ID + delta) % monitorCount;
+    // The index is used instead of the monitorID because using the monitorID won't work if monitors are removed or are mirrored
+    // as there would be gaps in the monitorID sequence
+    auto const f = [&](const auto& mon) { return mon.get() == monitor; };
+    int currentMonitorIndex = std::distance(g_pCompositor->m_vMonitors.begin(), std::find_if(g_pCompositor->m_vMonitors.begin(), g_pCompositor->m_vMonitors.end(), f));
+
+    int nextMonitorIndex = (monitorCount + currentMonitorIndex + delta) % monitorCount;
 
     nextMonitor = g_pCompositor->m_vMonitors[nextMonitorIndex].get();
 
