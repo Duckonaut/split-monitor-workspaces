@@ -25,7 +25,7 @@ static std::shared_ptr<HOOK_CALLBACK_FN> e_configReloadedHandle = nullptr;
 
 const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string& workspace)
 {
-    // if the workspace is "empty", we expect the new ID to be the next available ID on the given monitor (not the next ID in the list)
+    // if the workspace is "empty", we expect the new ID to be the next available ID on the given monitor (not the next ID in the global list)
     if (workspace == "empty") {
         // get the next workspace ID that is empty on this monitor
         PHLWORKSPACE activeWorkspace = monitor->activeWorkspace;
@@ -52,7 +52,7 @@ const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string&
     }
     catch (std::invalid_argument&) {
         // if parsing fails, assume the user wants to switch to the workspace by name
-        Debug::log(WARN, "[split-monitor-workspaces] Invalid workspace index: {}", workspace.c_str());
+        Debug::log(WARN, "[split-monitor-workspaces] Invalid workspace index: {}, assuming named workspace", workspace.c_str());
         return workspace;
     }
 
@@ -162,13 +162,13 @@ void writeWorkspaceRules(std::vector<std::string> const& rules)
 void fixWorkspaceArrangement()
 {
     // for all monitors in the map, move the workspaces to the correct monitor
-    for (auto& monitor : g_vMonitorWorkspaceMap) {
-        for (auto& workspace : monitor.second) {
+    for (auto const& [monitorID, workspaces] : g_vMonitorWorkspaceMap) {
+        for (auto const& workspace : workspaces) {
             PHLWORKSPACE workspacePtr = g_pCompositor->getWorkspaceByName(workspace);
             if (workspacePtr != nullptr) {
-                auto* const monitorPtr = g_pCompositor->getMonitorFromID(monitor.first);
+                auto* const monitorPtr = g_pCompositor->getMonitorFromID(monitorID);
                 if (monitorPtr == nullptr) {
-                    Debug::log(WARN, "[split-monitor-workspaces] fixWorkspaceArrangement: Monitor not found: {}", monitor.first);
+                    Debug::log(WARN, "[split-monitor-workspaces] fixWorkspaceArrangement: Monitor not found: {}", monitorID);
                     continue;
                 }
                 g_pCompositor->moveWorkspaceToMonitor(workspacePtr, monitorPtr);
@@ -178,7 +178,7 @@ void fixWorkspaceArrangement()
             }
         }
         // focus this monitor's first workspace
-        HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + monitor.second[0]);
+        HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + workspaces[0]);
     }
 }
 
