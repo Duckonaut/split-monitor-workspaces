@@ -109,11 +109,21 @@ void changeMonitor(bool quiet, const std::string& value)
         return;
     }
 
-    int nextMonitorIndex = (monitor->ID + delta) % monitorCount;
-
-    if (nextMonitorIndex < 0) {
-        nextMonitorIndex += monitorCount;
+    // The index is used instead of the monitorID because using the monitorID won't work if monitors are removed or mirrored
+    // as there would be gaps in the monitorID sequence
+    int currentMonitorIndex = -1;
+    for (size_t i = 0; i < g_pCompositor->m_vMonitors.size(); i++) {
+        if (g_pCompositor->m_vMonitors[i].get() == monitor) {
+            currentMonitorIndex = i;
+            break;
+        }
     }
+    if (currentMonitorIndex == -1) {
+        Debug::log(WARN, "[split-monitor-workspaces] Monitor ID {} not found in monitor list?", monitor->ID);
+        return;
+    }
+
+    int nextMonitorIndex = (monitorCount + currentMonitorIndex + delta) % monitorCount;
 
     nextMonitor = g_pCompositor->m_vMonitors[nextMonitorIndex].get();
 
