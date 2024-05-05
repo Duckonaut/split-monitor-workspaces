@@ -118,10 +118,11 @@ And two new ones, to move windows between monitors
 | split-changemonitorsilent | next/prev/+1/1    |
 
 It also provides the following config values
-| Name                                             | Type      | Default   | Description                                           |
-|--------------------------------------------------|-----------|-----------|-------------------------------------------------------|
-| `plugin:split-monitor-workspaces:count`          | int       | 10        | How many workspaces to bind to the monitor            |
-| `plugin:split-monitor-workspaces:keep_focused`   | boolean   | 0         | Keep current workspaces focused on plugin init/reload |
+| Name                                                    | Type      | Default   | Description                                           |
+|---------------------------------------------------------|-----------|-----------|-------------------------------------------------------|
+| `plugin:split-monitor-workspaces:count`                 | int       | 10        | How many workspaces to bind to the monitor            |
+| `plugin:split-monitor-workspaces:keep_focused`          | boolean   | 0         | Keep current workspaces focused on plugin init/reload |
+| `plugin:split-monitor-workspaces:enable_notifications`  | boolean   | 0         | Enable notifications                                  |
 
 Keep in mind that if you're using, for example, the `wlr/workspaces` widgets in [waybar](https://github.com/Alexays/Waybar), this will require a change to your config. You should set `all-outputs` to `false`, and adjust the icon mapping.
 
@@ -135,6 +136,8 @@ If your workspace-per-monitor count is 10, the first monitor will have workspace
 plugin {
     split-monitor-workspaces {
         count = 5
+        keep_focused = 0
+        enable_notifications = 0
     }
 }
 
