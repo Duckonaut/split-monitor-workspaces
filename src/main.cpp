@@ -13,15 +13,35 @@
 #include <unistd.h>
 #include <vector>
 
-const std::string k_workspaceCount = "plugin:split-monitor-workspaces:count";
-const std::string k_keepFocused = "plugin:split-monitor-workspaces:keep_focused";
+auto constexpr k_workspaceCount = "plugin:split-monitor-workspaces:count";
+auto constexpr k_keepFocused = "plugin:split-monitor-workspaces:keep_focused";
+auto constexpr k_enableNotifications = "plugin:split-monitor-workspaces:enable_notifications";
+
 const CColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
+bool g_enableNotifications = false;
 
 std::map<uint64_t, std::vector<std::string>> g_vMonitorWorkspaceMap;
 
 static std::shared_ptr<HOOK_CALLBACK_FN> e_monitorAddedHandle = nullptr;
 static std::shared_ptr<HOOK_CALLBACK_FN> e_monitorRemovedHandle = nullptr;
 static std::shared_ptr<HOOK_CALLBACK_FN> e_configReloadedHandle = nullptr;
+
+void raiseNotification(const std::string& message, float timeout = 5000.0F)
+{
+    if (g_enableNotifications) {
+        HyprlandAPI::addNotification(PHANDLE, message, s_pluginColor, timeout);
+    }
+}
+
+bool getIsNotificationsEnabled()
+{
+    static const auto* const enableNotificationsPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_enableNotifications)->getDataStaticPtr();
+    if (enableNotificationsPtr == nullptr) {
+        Debug::log(WARN, "[split-monitor-workspaces] Failed to get enable notifications config value");
+        return false;
+    }
+    return **enableNotificationsPtr != 0;
+}
 
 const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string& workspace)
 {
@@ -216,12 +236,12 @@ void mapWorkspacesToMonitors()
     writeWorkspaceRules(workspaceRules); // clear the file first
     for (auto& monitor : g_pCompositor->m_vMonitors) {
         int workspaceIndex = monitor->ID * workspaceCount + 1;
+
         std::string logMessage =
             "[split-monitor-workspaces] Mapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + workspaceCount - 1) + " to monitor " + monitor->szName;
-
-        HyprlandAPI::addNotification(PHANDLE, logMessage, s_pluginColor, 5000);
-
+        raiseNotification(logMessage);
         Debug::log(INFO, "{}", logMessage);
+
         for (int i = workspaceIndex; i < workspaceIndex + workspaceCount; i++) {
             std::string workspaceName = std::to_string(i);
             g_vMonitorWorkspaceMap[monitor->ID].push_back(workspaceName);
@@ -253,6 +273,8 @@ void configReloadedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::an
 {
     // anything you call in this function should not reload the config, as it will cause an infinite loop
     Debug::log(INFO, "[split-monitor-workspaces] Config reloaded");
+    g_enableNotifications = getIsNotificationsEnabled();
+    raiseNotification("[split-monitor-workspaces] Config reloaded");
     fixWorkspaceArrangement();
 }
 
@@ -268,6 +290,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 
     HyprlandAPI::addConfigValue(PHANDLE, k_workspaceCount, Hyprlang::INT{10});
     HyprlandAPI::addConfigValue(PHANDLE, k_keepFocused, Hyprlang::INT{0});
+    HyprlandAPI::addConfigValue(PHANDLE, k_enableNotifications, Hyprlang::INT{0});
 
     HyprlandAPI::addDispatcher(PHANDLE, "split-workspace", splitWorkspace);
     HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspace", splitMoveToWorkspace);
@@ -278,9 +301,11 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::reloadConfig();
     g_pConfigManager->tick();
 
+    g_enableNotifications = getIsNotificationsEnabled();
+    Debug::log(INFO, "[split-monitor-workspaces] Notifications are {}", g_enableNotifications ? "enabled" : "disabled");
     mapWorkspacesToMonitors();
 
-    HyprlandAPI::addNotification(PHANDLE, "[split-monitor-workspaces] Initialized successfully!", s_pluginColor, 5000);
+    raiseNotification("[split-monitor-workspaces] Initialized successfully!");
 
     e_monitorAddedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorAdded", refreshMapping);
     e_monitorRemovedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorRemoved", refreshMapping);
@@ -292,7 +317,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 APICALL EXPORT void PLUGIN_EXIT()
 {
     writeWorkspaceRules({});
-    HyprlandAPI::addNotification(PHANDLE, "[split-monitor-workspaces] Unloaded successfully!", s_pluginColor, 5000);
+    raiseNotification("[split-monitor-workspaces] Unloaded successfully!");
 
     g_vMonitorWorkspaceMap.clear();
 }
