@@ -4,6 +4,7 @@
 #include <hyprland/src/config/ConfigManager.hpp>
 #include <hyprland/src/desktop/Workspace.hpp>
 #include <hyprland/src/helpers/Color.hpp>
+#include <hyprland/src/helpers/memory/SharedPtr.hpp>
 #include <hyprland/src/managers/KeybindManager.hpp>
 
 #include "globals.hpp"
@@ -22,9 +23,9 @@ bool g_enableNotifications = false;
 
 std::map<uint64_t, std::vector<std::string>> g_vMonitorWorkspaceMap;
 
-static std::shared_ptr<HOOK_CALLBACK_FN> e_monitorAddedHandle = nullptr;
-static std::shared_ptr<HOOK_CALLBACK_FN> e_monitorRemovedHandle = nullptr;
-static std::shared_ptr<HOOK_CALLBACK_FN> e_configReloadedHandle = nullptr;
+static SP<HOOK_CALLBACK_FN> e_monitorAddedHandle = nullptr;
+static SP<HOOK_CALLBACK_FN> e_monitorRemovedHandle = nullptr;
+static SP<HOOK_CALLBACK_FN> e_configReloadedHandle = nullptr;
 
 void raiseNotification(const std::string& message, float timeout = 5000.0F)
 {
