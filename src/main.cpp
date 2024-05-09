@@ -236,6 +236,12 @@ void mapWorkspacesToMonitors()
     std::vector<std::string> workspaceRules;
     writeWorkspaceRules(workspaceRules); // clear the file first
     for (auto& monitor : g_pCompositor->m_vMonitors) {
+        if (monitor->isMirror())
+        {
+            Debug::log(INFO, "[split-monitor-workspaces] Skipping mirrored monitor {}", monitor->szName);
+            continue;
+        }
+
         int workspaceIndex = monitor->ID * workspaceCount + 1;
 
         std::string logMessage =
