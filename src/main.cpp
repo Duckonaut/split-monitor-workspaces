@@ -207,8 +207,6 @@ void fixWorkspaceArrangement()
                 Debug::log(WARN, "[split-monitor-workspaces] fixWorkspaceArrangement: Workspace not found: {}", workspace);
             }
         }
-        // focus this monitor's first workspace
-        HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + workspaces[0]);
     }
 }
 
