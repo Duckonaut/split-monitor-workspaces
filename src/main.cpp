@@ -236,8 +236,7 @@ void mapWorkspacesToMonitors()
     std::vector<std::string> workspaceRules;
     writeWorkspaceRules(workspaceRules); // clear the file first
     for (auto& monitor : g_pCompositor->m_vMonitors) {
-        if (monitor->isMirror())
-        {
+        if (monitor->isMirror()) {
             Debug::log(INFO, "[split-monitor-workspaces] Skipping mirrored monitor {}", monitor->szName);
             continue;
         }
@@ -271,12 +270,12 @@ void mapWorkspacesToMonitors()
     HyprlandAPI::reloadConfig();
 }
 
-void refreshMapping(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/)
+void refreshMapping(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/) // NOLINT(performance-unnecessary-value-param)
 {
     mapWorkspacesToMonitors();
 }
 
-void configReloadedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/)
+void configReloadedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/) // NOLINT(performance-unnecessary-value-param)
 {
     // anything you call in this function should not reload the config, as it will cause an infinite loop
     Debug::log(INFO, "[split-monitor-workspaces] Config reloaded");
