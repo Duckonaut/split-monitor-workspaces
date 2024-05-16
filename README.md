@@ -4,7 +4,6 @@
 
 A small plugin to provide `awesome`/`dwm`-like behavior with workspaces: split them between monitors and provide independent numbering
 
-
 # Requirements
 - Hyprland >= v0.36.0
 
