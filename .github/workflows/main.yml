@@ -1,4 +1,4 @@
-name: CI
+name: Build on latest Hyprland git commit
 
 on:
   pull_request:
@@ -19,9 +19,8 @@ jobs:
       image: duckonaut/hyprland-arch:latest
     steps:
     - name: Install dependencies
-      # TODO: remove hyprwayland-scanner-git once hyprland-git properly depends on it
       run: |
-        sudo -u user sh -c "paru -Syu --noconfirm hyprwayland-scanner-git hyprland-git"
+        sudo -u user sh -c "paru -Syu --noconfirm hyprland-git"
 
     - name: Checkout current repository
       uses: actions/checkout@v4

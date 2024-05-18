@@ -1,0 +1,57 @@
+name: Build on latest Hyprland release
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  schedule:
+    # run every night at 2AM (the base docker image is updated at midnight)
+    - cron: '0 2 * * *' 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      # image built from the Dockerfile in the .github/ folder
+      image: duckonaut/hyprland-arch:latest
+    steps:
+    - name: Install dependencies
+      run: |
+        pacman -Syu --noconfirm hyprland meson ninja
+
+    - name: Get version from installed Hyprland
+      run: |
+        hash=$(awk -F'"' '/GIT_COMMIT_HASH/ { print $2 }' /usr/include/hyprland/src/version.h)
+        if [ -z "$hash" ]; then
+          echo "Failed to get GIT_COMMIT_HASH from /usr/include/hyprland/src/version.h"
+          exit 1
+        fi
+        echo "GIT_COMMIT_HASH=$hash" >> $GITHUB_ENV
+
+    - name: Checkout current repository and checkout pinned commit
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # to allow checkout out a specific commit later
+
+    - name: Get pinned commit from hyprpm.toml file
+      run: |
+        commit=$(grep -F "$GIT_COMMIT_HASH" hyprpm.toml | awk -F'"' '{print $4}')
+        if [ -z "$commit" ]; then
+          echo "Failed to get pinned commit from hyprpm.toml with GIT_COMMIT_HASH=$GIT_COMMIT_HASH"
+          exit 1
+        fi
+        echo "PINNED_COMMIT=$commit" >> $GITHUB_ENV
+
+    - name: Checkout pinned commit
+      run: |
+        echo "Checking out pinned commit $PINNED_COMMIT"
+        git config --global --add safe.directory /__w/split-monitor-workspaces/split-monitor-workspaces # fix dubious ownership warning
+        git checkout $PINNED_COMMIT
+
+    - name: Build current repository
+      run: |
+        meson setup build --wipe
+        ninja -C build
