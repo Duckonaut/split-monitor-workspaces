@@ -193,18 +193,25 @@ void fixWorkspaceArrangement()
 {
     // for all monitors in the map, move the workspaces to the correct monitor
     for (auto const& [monitorID, workspaces] : g_vMonitorWorkspaceMap) {
+        auto* const monitorPtr = g_pCompositor->getMonitorFromID(monitorID);
+        if (monitorPtr == nullptr) {
+            Debug::log(WARN, "[split-monitor-workspaces] fixWorkspaceArrangement: Monitor not found: {}", monitorID);
+            continue;
+        }
+
         for (auto const& workspace : workspaces) {
             PHLWORKSPACE workspacePtr = g_pCompositor->getWorkspaceByName(workspace);
             if (workspacePtr != nullptr) {
-                auto* const monitorPtr = g_pCompositor->getMonitorFromID(monitorID);
-                if (monitorPtr == nullptr) {
-                    Debug::log(WARN, "[split-monitor-workspaces] fixWorkspaceArrangement: Monitor not found: {}", monitorID);
-                    continue;
-                }
                 g_pCompositor->moveWorkspaceToMonitor(workspacePtr, monitorPtr);
             }
             else {
                 Debug::log(WARN, "[split-monitor-workspaces] fixWorkspaceArrangement: Workspace not found: {}", workspace);
+            }
+        }
+        // check if currently focused workspace on this monitor actually belongs to this monitor, if not, switch to the first workspace
+        if (std::find(workspaces.begin(), workspaces.end(), monitorPtr->activeWorkspace->m_szName) == workspaces.end()) {
+            if (!workspaces.empty()) {
+                HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + workspaces[0]);
             }
         }
     }
