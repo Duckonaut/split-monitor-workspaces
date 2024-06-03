@@ -88,30 +88,35 @@ const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string&
     return g_vMonitorWorkspaceMap[monitor->ID][workspaceIndex];
 }
 
+CMonitor* getCurrentMonitor()
+{
+    // get last focused monitor, because some people switch monitors with a keybind while the cursor is on a different monitor
+    if (CMonitor* monitor = g_pCompositor->m_pLastMonitor.lock().get()) {
+        return monitor;
+    }
+    Debug::log(WARN, "[split-monitor-workspaces] Last monitor does not exist, falling back to cursor's monitor");
+    // fallback to the monitor the cursor is on
+    return g_pCompositor->getMonitorFromCursor();
+}
+
 void splitWorkspace(const std::string& workspace)
 {
-    CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
-
-    HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + getWorkspaceFromMonitor(monitor, workspace));
+    HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
 }
 
 void splitMoveToWorkspace(const std::string& workspace)
 {
-    CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
-
-    HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + getWorkspaceFromMonitor(monitor, workspace));
+    HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
 }
 
 void splitMoveToWorkspaceSilent(const std::string& workspace)
 {
-    CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
-
-    HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + getWorkspaceFromMonitor(monitor, workspace));
+    HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
 }
 
 void changeMonitor(bool quiet, const std::string& value)
 {
-    CMonitor* monitor = g_pCompositor->getMonitorFromCursor();
+    CMonitor* monitor = getCurrentMonitor();
 
     CMonitor* nextMonitor = nullptr;
 
