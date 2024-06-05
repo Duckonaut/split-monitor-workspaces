@@ -1,5 +1,6 @@
 # split-monitor-workspaces
 [![Build](https://github.com/Duckonaut/split-monitor-workspaces/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/Duckonaut/split-monitor-workspaces/actions/workflows/main.yml)
+[![Build on latest Hyprland release](https://github.com/Duckonaut/split-monitor-workspaces/actions/workflows/release.yml/badge.svg)](https://github.com/Duckonaut/split-monitor-workspaces/actions/workflows/release.yml)
 
 
 A small plugin to provide `awesome`/`dwm`-like behavior with workspaces: split them between monitors and provide independent numbering
