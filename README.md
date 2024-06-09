@@ -118,8 +118,8 @@ And two new ones, to move windows between monitors
 
 | Normal                    | Arguments         |
 |---------------------------|-------------------|
-| split-changemonitor       | next/prev/+1/1    |
-| split-changemonitorsilent | next/prev/+1/1    |
+| split-changemonitor       | next/prev/+1/-1    |
+| split-changemonitorsilent | next/prev/+1/-1    |
 
 It also provides the following config values
 | Name                                                    | Type      | Default   | Description                                           |
