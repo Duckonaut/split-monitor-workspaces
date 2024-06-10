@@ -2,9 +2,11 @@
 name = "split-monitor-workspaces"
 authors = ["Duckonaut", "zjeffer"]
 commit_pins = [
+    # ["<hyprland commit>", "<split-monitor-workspaces commit>"]
     ["360ede79d124ffdeebbe8401f1ac4bc0dbec2c91", "f7a306396da163422048fd38eecd92c68ce21e58"], # 0.38.1
     ["fe7b748eb668136dd0558b7c8279bfcd7ab4d759", "b0ee3953eaeba70f3fba7c4368987d727779826a"], # 0.39.1
-    ["cba1ade848feac44b2eda677503900639581c3f4", "b40147d96d62a9e9bbc56b18ea421211ee598357"]  # 0.40.0
+    ["cba1ade848feac44b2eda677503900639581c3f4", "b40147d96d62a9e9bbc56b18ea421211ee598357"], # 0.40.0
+    ["ea2501d4556f84d3de86a4ae2f4b22a474555b9f", "2b57b5706cde7577c9cbb4de9e1f9a14777d09af"]  # 0.41.0
 ]
 
 [split-monitor-workspaces]
