@@ -8,7 +8,6 @@
 #include <hyprutils/memory/SharedPtr.hpp>
 
 #include "globals.hpp"
-#include "hyprland/src/SharedDefs.hpp"
 
 #include <map>
 #include <unistd.h>

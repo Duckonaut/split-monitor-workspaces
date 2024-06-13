@@ -20,7 +20,7 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
-        pacman -Syu --noconfirm hyprland meson ninja
+        paru -Syu --noconfirm hyprland meson ninja cpio hyprwayland-scanner hyprutils
 
     - name: Get version from installed Hyprland
       run: |
