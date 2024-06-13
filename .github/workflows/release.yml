@@ -62,11 +62,13 @@ jobs:
 
     - name: Checkout pinned commit
       run: |
+        cd split-monitor-workspaces
         echo "Checking out pinned commit $PINNED_COMMIT"
         git config --global --add safe.directory /__w/split-monitor-workspaces/split-monitor-workspaces # fix dubious ownership warning
         git checkout $PINNED_COMMIT
 
     - name: Build current repository
       run: |
+        cd split-monitor-workspaces
         meson setup build --wipe
         ninja -C build
