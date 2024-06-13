@@ -37,6 +37,7 @@ jobs:
         repository: hyprwm/Hyprland
         ref: ${{ env.GIT_COMMIT_HASH }}
         path: Hyprland
+        submodules: recursive
     
     - name: Run `make installheaders` in Hyprland repository
       run: |
