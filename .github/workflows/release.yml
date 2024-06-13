@@ -40,7 +40,7 @@ jobs:
     
     - name: Run `make installheaders` in Hyprland repository
       run: |
-        echo $(pwd)
+        cd Hyprland
         make all && make installheaders
 
     - name: Checkout current repository and checkout pinned commit
@@ -51,6 +51,7 @@ jobs:
 
     - name: Get pinned commit from hyprpm.toml file
       run: |
+        cd split-monitor-workspaces
         commit=$(grep -F "$GIT_COMMIT_HASH" hyprpm.toml | awk -F'"' '{print $4}')
         if [ -z "$commit" ]; then
           echo "Failed to get pinned commit from hyprpm.toml with GIT_COMMIT_HASH=$GIT_COMMIT_HASH"
