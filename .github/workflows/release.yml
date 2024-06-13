@@ -40,6 +40,7 @@ jobs:
     
     - name: Run `make installheaders` in Hyprland repository
       run: |
+        echo $(pwd)
         make all && make installheaders
 
     - name: Checkout current repository and checkout pinned commit
