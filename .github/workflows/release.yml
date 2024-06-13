@@ -35,7 +35,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         repository: hyprwm/Hyprland
-        ref: $GIT_COMMIT_HASH
+        ref: ${{ env.GIT_COMMIT_HASH }}
         path: hyprland
     
     - name: Run `make installheaders` in Hyprland repository
