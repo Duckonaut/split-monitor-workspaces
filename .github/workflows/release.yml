@@ -31,6 +31,16 @@ jobs:
         fi
         echo "GIT_COMMIT_HASH=$hash" >> $GITHUB_ENV
 
+    - name: Checkout Hyprland repository
+      uses: actions/checkout@v4
+      with:
+        repository: hyprwm/Hyprland
+        ref: $GIT_COMMIT_HASH
+    
+    - name: Run `make installheaders` in Hyprland repository
+      run: |
+        make all && make installheaders
+
     - name: Checkout current repository and checkout pinned commit
       uses: actions/checkout@v4
       with:
