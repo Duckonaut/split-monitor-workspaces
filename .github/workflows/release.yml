@@ -36,7 +36,7 @@ jobs:
       with:
         repository: hyprwm/Hyprland
         ref: ${{ env.GIT_COMMIT_HASH }}
-        path: hyprland
+        path: Hyprland
     
     - name: Run `make installheaders` in Hyprland repository
       run: |
