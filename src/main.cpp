@@ -4,11 +4,10 @@
 #include <hyprland/src/config/ConfigManager.hpp>
 #include <hyprland/src/desktop/Workspace.hpp>
 #include <hyprland/src/helpers/Color.hpp>
-#include <hyprland/src/helpers/memory/SharedPtr.hpp>
 #include <hyprland/src/managers/KeybindManager.hpp>
+#include <hyprutils/memory/SharedPtr.hpp>
 
 #include "globals.hpp"
-#include "hyprland/src/SharedDefs.hpp"
 
 #include <map>
 #include <unistd.h>
