@@ -20,7 +20,7 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
-        pacman -Syu --noconfirm hyprland meson ninja
+        sudo -u user sh -c "paru -Syu --noconfirm hyprland meson ninja cpio hyprwayland-scanner hyprutils"
 
     - name: Get version from installed Hyprland
       run: |
@@ -31,13 +31,28 @@ jobs:
         fi
         echo "GIT_COMMIT_HASH=$hash" >> $GITHUB_ENV
 
+    - name: Checkout Hyprland repository
+      uses: actions/checkout@v4
+      with:
+        repository: hyprwm/Hyprland
+        ref: ${{ env.GIT_COMMIT_HASH }}
+        path: Hyprland
+        submodules: recursive
+    
+    - name: Run `make installheaders` in Hyprland repository
+      run: |
+        cd Hyprland
+        make all && make installheaders
+
     - name: Checkout current repository and checkout pinned commit
       uses: actions/checkout@v4
       with:
         fetch-depth: 0 # to allow checkout out a specific commit later
+        path: split-monitor-workspaces
 
     - name: Get pinned commit from hyprpm.toml file
       run: |
+        cd split-monitor-workspaces
         commit=$(grep -F "$GIT_COMMIT_HASH" hyprpm.toml | awk -F'"' '{print $4}')
         if [ -z "$commit" ]; then
           echo "Failed to get pinned commit from hyprpm.toml with GIT_COMMIT_HASH=$GIT_COMMIT_HASH"
@@ -47,11 +62,13 @@ jobs:
 
     - name: Checkout pinned commit
       run: |
+        cd split-monitor-workspaces
         echo "Checking out pinned commit $PINNED_COMMIT"
         git config --global --add safe.directory /__w/split-monitor-workspaces/split-monitor-workspaces # fix dubious ownership warning
         git checkout $PINNED_COMMIT
 
     - name: Build current repository
       run: |
+        cd split-monitor-workspaces
         meson setup build --wipe
         ninja -C build
