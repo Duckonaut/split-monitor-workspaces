@@ -20,6 +20,9 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
+        sudo pacman -Syu --noconfirm archlinux-keyring
+        sudo pacman-key --init
+        sudo pacman-key --refresh-keys
         sudo -u user sh -c "paru -Syu --noconfirm hyprland-git"
 
     - name: Checkout current repository
