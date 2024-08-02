@@ -172,27 +172,6 @@ void splitChangeMonitor(const std::string& value)
     changeMonitor(false, value);
 }
 
-void writeWorkspaceRules(std::vector<std::string> const& rules)
-{
-    // Write the workspacerules to a file, source this same file in your hyprland config
-    try {
-        std::ofstream file;
-        file.open("/tmp/hyprland-workspace-rules", std::ios::out | std::ios::trunc);
-        if (rules.empty()) { // clear the file
-            file << '\n';
-            file.close();
-            return;
-        }
-        for (const auto& rule : rules) {
-            file << rule << '\n';
-        }
-        file.close();
-    }
-    catch (std::exception& e) {
-        Debug::log(WARN, "[split-monitor-workspaces] Failed to write workspace rules: {}", e.what());
-    }
-}
-
 void fixWorkspaceArrangement()
 {
     // for all monitors in the map, move the workspaces to the correct monitor
@@ -243,7 +222,6 @@ void mapWorkspacesToMonitors()
     Debug::log(INFO, "[split-monitor-workspaces] Mapping {} workspaces to monitors...", workspaceCount);
 
     std::vector<std::string> workspaceRules;
-    writeWorkspaceRules(workspaceRules); // clear the file first
     for (auto const& monitor : g_pCompositor->m_vMonitors) {
         if (monitor.get() == nullptr) {
             Debug::log(WARN, "[split-monitor-workspaces] Monitor is null");
@@ -266,20 +244,17 @@ void mapWorkspacesToMonitors()
             g_vMonitorWorkspaceMap[monitor->ID].push_back(workspaceName);
             PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
 
-            if (workspace != nullptr) {
-                g_pCompositor->moveWorkspaceToMonitor(workspace, monitor.get());
+            if (workspace == nullptr) {
+                workspace = g_pCompositor->createNewWorkspace(i, monitor->ID);
             }
-
-            // The plugin can't persistently set the workspace rules, so we have to also write them to a file manually
-            workspaceRules.emplace_back("workspace = " + workspaceName + ",monitor:" + monitor->szName + ",persistent:true");
+            g_pCompositor->moveWorkspaceToMonitor(workspace, monitor.get());
+            workspace->m_bPersistent = true;
         }
 
         if (keepFocused == 0) {
             HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(workspaceIndex));
         }
     }
-    writeWorkspaceRules(workspaceRules);
-    HyprlandAPI::reloadConfig();
 }
 
 void refreshMapping(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/) // NOLINT(performance-unnecessary-value-param)
@@ -334,7 +309,6 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 
 APICALL EXPORT void PLUGIN_EXIT()
 {
-    writeWorkspaceRules({});
     raiseNotification("[split-monitor-workspaces] Unloaded successfully!");
 
     g_vMonitorWorkspaceMap.clear();
