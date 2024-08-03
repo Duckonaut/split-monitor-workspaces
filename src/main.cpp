@@ -36,6 +36,7 @@ void raiseNotification(const std::string& message, float timeout = 5000.0F)
 
 int getParamValue(const char* paramName)
 {
+    Debug::log(INFO, "[split-monitor-workspaces] Getting config value {}", paramName);
     const auto* const paramPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, paramName)->getDataStaticPtr();
     if (paramPtr == nullptr) {
         Debug::log(WARN, "[split-monitor-workspaces] Failed to get config value {}", paramName);
@@ -176,22 +177,26 @@ void splitChangeMonitor(const std::string& value)
 void mapMonitor(CMonitor* monitor)
 {
     if (monitor->activeMonitorRule.disabled) {
+        Debug::log(INFO, "[split-monitor-workspaces] Skipping disabled monitor {}", monitor->szName);
+        return;
+    }
+
+    if (monitor->isMirror()) {
+        Debug::log(INFO, "[split-monitor-workspaces] Skipping mirrored monitor {}", monitor->szName);
         return;
     }
 
     int workspaceIndex = monitor->ID * g_workspaceCount + 1;
-    
-    std::string logMessage =
-        "[split-monitor-workspaces] Mapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + g_workspaceCount - 1) + " to monitor " + monitor->szName;
-    raiseNotification(logMessage);
-    Debug::log(INFO, "{}", logMessage);
+
+    Debug::log(INFO, "{}",
+               "[split-monitor-workspaces] Mapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + g_workspaceCount - 1) + " to monitor " + monitor->szName);
 
     for (int i = workspaceIndex; i < workspaceIndex + g_workspaceCount; i++) {
         std::string workspaceName = std::to_string(i);
         g_vMonitorWorkspaceMap[monitor->ID].push_back(workspaceName);
         PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
 
-        if (workspace == nullptr) {
+        if (workspace.get() == nullptr) {
             workspace = g_pCompositor->createNewWorkspace(i, monitor->ID);
         }
         g_pCompositor->moveWorkspaceToMonitor(workspace, monitor);
@@ -207,30 +212,31 @@ void unmapMonitor(CMonitor* monitor)
 {
     int workspaceIndex = monitor->ID * g_workspaceCount + 1;
 
-    std::string logMessage =
-        "[split-monitor-workspaces] Unmapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + g_workspaceCount - 1) + " from monitor " + monitor->szName;
-    raiseNotification(logMessage);
-    Debug::log(INFO, "{}", logMessage);
+    Debug::log(INFO, "{}",
+               "[split-monitor-workspaces] Unmapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + g_workspaceCount - 1) + " from monitor " + monitor->szName);
 
-    auto monitorWorkspaces = g_vMonitorWorkspaceMap.find(monitor->ID);
-    if (monitorWorkspaces != g_vMonitorWorkspaceMap.end()) {
-        for (const auto &workspaceName : monitorWorkspaces->second) {
+    if (g_vMonitorWorkspaceMap.contains(monitor->ID)) {
+        for (const auto& workspaceName : g_vMonitorWorkspaceMap[monitor->ID]) {
             PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
 
-            if (workspace != nullptr) {
+            if (workspace.get() != nullptr) {
                 workspace->m_bPersistent = false;
             }
         }
-        g_vMonitorWorkspaceMap.erase(monitorWorkspaces);
+        g_vMonitorWorkspaceMap.erase(monitor->ID);
     }
 }
 
 void unmapAllMonitors()
 {
     while (!g_vMonitorWorkspaceMap.empty()) {
-        auto monitor = g_pCompositor->getMonitorFromID(g_vMonitorWorkspaceMap.begin()->first);
-        if (monitor) {
-            unmapMonitor(monitor);
+        auto [monitorID, workspaces] = *g_vMonitorWorkspaceMap.begin();
+        auto* monitor = g_pCompositor->getMonitorFromID(monitorID);
+        if (monitor != nullptr) {
+            unmapMonitor(monitor); // will remove the monitor from the map
+        }
+        else {
+            g_vMonitorWorkspaceMap.erase(monitorID); // remove it manually
         }
     }
     g_vMonitorWorkspaceMap.clear();
@@ -238,36 +244,46 @@ void unmapAllMonitors()
 
 void remapAllMonitors()
 {
+    raiseNotification("[split-monitor-workspaces] Remapping workspaces...");
     unmapAllMonitors();
-    for (auto monitor : g_pCompositor->m_vMonitors) {
+    for (const auto& monitor : g_pCompositor->m_vMonitors) {
         mapMonitor(monitor.get());
     }
 }
 
 void reload()
 {
-    // anything you call in this function should not reload the config, as it will cause an infinite loop
-    Debug::log(INFO, "[split-monitor-workspaces] Config reloaded");
     g_enableNotifications = getParamValue(k_enableNotifications) != 0;
     g_keepFocused = getParamValue(k_keepFocused);
     g_workspaceCount = getParamValue(k_workspaceCount);
     remapAllMonitors();
-    raiseNotification("[split-monitor-workspaces] Config reloaded");
 }
 
-void monitorAddedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param) { // NOLINT(performance-unnecessary-value-param)
-    auto monitor = std::any_cast<CMonitor*>(param);
+void monitorAddedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param)
+{ // NOLINT(performance-unnecessary-value-param)
+    auto* monitor = std::any_cast<CMonitor*>(param);
+    if (monitor == nullptr) {
+        Debug::log(WARN, "[split-monitor-workspaces] Monitor added callback called with nullptr?");
+        return;
+    }
     mapMonitor(monitor);
 }
 
 void monitorRemovedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param) // NOLINT(performance-unnecessary-value-param)
 {
-    auto monitor = std::any_cast<CMonitor*>(param);
+    auto* monitor = std::any_cast<CMonitor*>(param);
+    if (monitor == nullptr) {
+        Debug::log(WARN, "[split-monitor-workspaces] Monitor removed callback called with nullptr?");
+        return;
+    }
     unmapMonitor(monitor);
 }
 
 void configReloadedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/) // NOLINT(performance-unnecessary-value-param)
 {
+    // anything you call in this function should not reload the config, as it will cause an infinite loop
+    Debug::log(INFO, "[split-monitor-workspaces] Config reloaded");
+    raiseNotification("[split-monitor-workspaces] Config reloaded");
     reload();
 }
 
@@ -296,13 +312,12 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 
     reload();
 
-    raiseNotification("[split-monitor-workspaces] Initialized successfully!");
-
     e_monitorAddedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorAdded", monitorAddedCallback);
     e_monitorRemovedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorRemoved", monitorRemovedCallback);
     e_configReloadedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "configReloaded", configReloadedCallback);
 
-    return {"split-monitor-workspaces", "Split monitor workspace namespaces", "Duckonaut", "1.1.0"};
+    raiseNotification("[split-monitor-workspaces] Initialized successfully!");
+    return {"split-monitor-workspaces", "Split monitor workspace namespaces", "Duckonaut", "1.2.0"};
 }
 
 APICALL EXPORT void PLUGIN_EXIT()

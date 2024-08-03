@@ -1,5 +1,5 @@
 project('split-monitor-workspaces', 'cpp',
-  version: '0.1',
+  version: '1.2.0',
   default_options: ['buildtype=release'],
 )
 
