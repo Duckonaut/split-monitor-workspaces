@@ -19,7 +19,11 @@ auto constexpr k_enableNotifications = "plugin:split-monitor-workspaces:enable_n
 
 const CColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
 bool g_enableNotifications = false;
-int g_workspaceCount, g_keepFocused;
+bool g_keepFocused = false;
+int g_workspaceCount;
+
+// the first time we load the plugin, we want to switch to the first workspace on the first monitor regardless of keepFocused
+bool g_firstLoad = true;
 
 std::map<uint64_t, std::vector<std::string>> g_vMonitorWorkspaceMap;
 
@@ -203,7 +207,8 @@ void mapMonitor(CMonitor* monitor)
         workspace->m_bPersistent = true;
     }
 
-    if (g_keepFocused == 0) {
+    if (!g_keepFocused || g_firstLoad) {
+        // we also want to switch to the first workspace when the plugin is first loaded
         HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(workspaceIndex));
     }
 }
@@ -254,9 +259,10 @@ void remapAllMonitors()
 void reload()
 {
     g_enableNotifications = getParamValue(k_enableNotifications) != 0;
-    g_keepFocused = getParamValue(k_keepFocused);
+    g_keepFocused = getParamValue(k_keepFocused) != 0;
     g_workspaceCount = getParamValue(k_workspaceCount);
     remapAllMonitors();
+    g_firstLoad = false;
 }
 
 void monitorAddedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param)
