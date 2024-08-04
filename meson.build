@@ -13,6 +13,7 @@ else
 endif
 
 add_global_arguments('-DWLR_USE_UNSTABLE', language: 'cpp')
+add_global_arguments('-fno-gnu-unique', language: 'cpp')
 
 globber = run_command('find', './src', '-name', '*.cpp', check: true)
 src = globber.stdout().strip().split('\n')

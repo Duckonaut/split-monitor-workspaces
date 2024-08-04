@@ -256,11 +256,16 @@ void remapAllMonitors()
     }
 }
 
-void reload()
+void loadConfigValues()
 {
     g_enableNotifications = getParamValue(k_enableNotifications) != 0;
     g_keepFocused = getParamValue(k_keepFocused) != 0;
     g_workspaceCount = getParamValue(k_workspaceCount);
+}
+
+void reload()
+{
+    loadConfigValues();
     remapAllMonitors();
     g_firstLoad = false;
 }
@@ -312,6 +317,11 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspacesilent", splitMoveToWorkspaceSilent);
     HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitor", splitChangeMonitor);
     HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitorsilent", splitChangeMonitorSilent);
+
+    // reload the config before adding the callback, so we can already use the config's values we defined above
+    HyprlandAPI::reloadConfig();
+    g_pConfigManager->tick();
+    loadConfigValues();
 
     e_monitorAddedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorAdded", monitorAddedCallback);
     e_monitorRemovedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorRemoved", monitorRemovedCallback);
