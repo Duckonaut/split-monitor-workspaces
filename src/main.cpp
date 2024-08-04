@@ -307,14 +307,12 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitor", splitChangeMonitor);
     HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitorsilent", splitChangeMonitorSilent);
 
-    HyprlandAPI::reloadConfig();
-    g_pConfigManager->tick();
-
-    reload();
-
     e_monitorAddedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorAdded", monitorAddedCallback);
     e_monitorRemovedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorRemoved", monitorRemovedCallback);
     e_configReloadedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "configReloaded", configReloadedCallback);
+
+    // initial mapping of the workspaces will happen after plugin initialization, through the configReloadedCallback
+    // this is because Hyprland will automatically force a config reload after the plugin is loaded
 
     raiseNotification("[split-monitor-workspaces] Initialized successfully!");
     return {"split-monitor-workspaces", "Split monitor workspace namespaces", "Duckonaut", "1.2.0"};
