@@ -1,5 +1,5 @@
 project('split-monitor-workspaces', 'cpp',
-  version: '0.1',
+  version: '1.2.0',
   default_options: ['buildtype=release'],
 )
 
@@ -13,6 +13,7 @@ else
 endif
 
 add_global_arguments('-DWLR_USE_UNSTABLE', language: 'cpp')
+add_global_arguments('-fno-gnu-unique', language: 'cpp')
 
 globber = run_command('find', './src', '-name', '*.cpp', check: true)
 src = globber.stdout().strip().split('\n')
