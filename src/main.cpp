@@ -19,6 +19,11 @@ auto constexpr k_enableNotifications = "plugin:split-monitor-workspaces:enable_n
 
 const CColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
 bool g_enableNotifications = false;
+bool g_keepFocused = false;
+int g_workspaceCount;
+
+// the first time we load the plugin, we want to switch to the first workspace on the first monitor regardless of keepFocused
+bool g_firstLoad = true;
 
 std::map<uint64_t, std::vector<std::string>> g_vMonitorWorkspaceMap;
 
@@ -33,14 +38,15 @@ void raiseNotification(const std::string& message, float timeout = 5000.0F)
     }
 }
 
-bool getIsNotificationsEnabled()
+int getParamValue(const char* paramName)
 {
-    static const auto* const enableNotificationsPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_enableNotifications)->getDataStaticPtr();
-    if (enableNotificationsPtr == nullptr) {
-        Debug::log(WARN, "[split-monitor-workspaces] Failed to get enable notifications config value");
-        return false;
+    Debug::log(INFO, "[split-monitor-workspaces] Getting config value {}", paramName);
+    const auto* const paramPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, paramName)->getDataStaticPtr();
+    if (paramPtr == nullptr) {
+        Debug::log(WARN, "[split-monitor-workspaces] Failed to get config value {}", paramName);
+        return 0;
     }
-    return **enableNotificationsPtr != 0;
+    return **paramPtr;
 }
 
 const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string& workspace)
@@ -172,128 +178,124 @@ void splitChangeMonitor(const std::string& value)
     changeMonitor(false, value);
 }
 
-void writeWorkspaceRules(std::vector<std::string> const& rules)
+void mapMonitor(CMonitor* monitor)
 {
-    // Write the workspacerules to a file, source this same file in your hyprland config
-    try {
-        std::ofstream file;
-        file.open("/tmp/hyprland-workspace-rules", std::ios::out | std::ios::trunc);
-        if (rules.empty()) { // clear the file
-            file << '\n';
-            file.close();
-            return;
-        }
-        for (const auto& rule : rules) {
-            file << rule << '\n';
-        }
-        file.close();
-    }
-    catch (std::exception& e) {
-        Debug::log(WARN, "[split-monitor-workspaces] Failed to write workspace rules: {}", e.what());
-    }
-}
-
-void fixWorkspaceArrangement()
-{
-    // for all monitors in the map, move the workspaces to the correct monitor
-    for (auto const& [monitorID, workspaces] : g_vMonitorWorkspaceMap) {
-        auto* const monitorPtr = g_pCompositor->getMonitorFromID(monitorID);
-        if (monitorPtr == nullptr) {
-            Debug::log(WARN, "[split-monitor-workspaces] fixWorkspaceArrangement: Monitor not found: {}", monitorID);
-            continue;
-        }
-
-        for (auto const& workspace : workspaces) {
-            PHLWORKSPACE workspacePtr = g_pCompositor->getWorkspaceByName(workspace);
-            if (workspacePtr != nullptr) {
-                g_pCompositor->moveWorkspaceToMonitor(workspacePtr, monitorPtr);
-            }
-            else {
-                Debug::log(WARN, "[split-monitor-workspaces] fixWorkspaceArrangement: Workspace not found: {}", workspace);
-            }
-        }
-        // check if currently focused workspace on this monitor actually belongs to this monitor, if not, switch to the first workspace
-        if (std::find(workspaces.begin(), workspaces.end(), monitorPtr->activeWorkspace->m_szName) == workspaces.end()) {
-            if (!workspaces.empty()) {
-                HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + workspaces[0]);
-            }
-        }
-    }
-}
-
-void mapWorkspacesToMonitors()
-{
-    g_vMonitorWorkspaceMap.clear();
-
-    static const auto* const workspaceCountPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_workspaceCount)->getDataStaticPtr();
-    static const auto* const keepFocusedPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, k_keepFocused)->getDataStaticPtr();
-
-    if (workspaceCountPtr == nullptr) {
-        Debug::log(WARN, "[split-monitor-workspaces] Failed to get workspace count config value");
-        return;
-    }
-    if (keepFocusedPtr == nullptr) {
-        Debug::log(WARN, "[split-monitor-workspaces] Failed to get keep focused config value");
+    if (monitor->activeMonitorRule.disabled) {
+        Debug::log(INFO, "[split-monitor-workspaces] Skipping disabled monitor {}", monitor->szName);
         return;
     }
 
-    int keepFocused = **keepFocusedPtr;
-    int workspaceCount = **workspaceCountPtr;
+    if (monitor->isMirror()) {
+        Debug::log(INFO, "[split-monitor-workspaces] Skipping mirrored monitor {}", monitor->szName);
+        return;
+    }
 
-    Debug::log(INFO, "[split-monitor-workspaces] Mapping {} workspaces to monitors...", workspaceCount);
+    int workspaceIndex = monitor->ID * g_workspaceCount + 1;
 
-    std::vector<std::string> workspaceRules;
-    writeWorkspaceRules(workspaceRules); // clear the file first
-    for (auto const& monitor : g_pCompositor->m_vMonitors) {
-        if (monitor.get() == nullptr) {
-            Debug::log(WARN, "[split-monitor-workspaces] Monitor is null");
-            continue;
+    Debug::log(INFO, "{}",
+               "[split-monitor-workspaces] Mapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + g_workspaceCount - 1) + " to monitor " + monitor->szName);
+
+    for (int i = workspaceIndex; i < workspaceIndex + g_workspaceCount; i++) {
+        std::string workspaceName = std::to_string(i);
+        g_vMonitorWorkspaceMap[monitor->ID].push_back(workspaceName);
+        PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
+
+        if (workspace.get() == nullptr) {
+            workspace = g_pCompositor->createNewWorkspace(i, monitor->ID);
         }
-        if (monitor->isMirror()) {
-            Debug::log(INFO, "[split-monitor-workspaces] Skipping mirrored monitor {}", monitor->szName);
-            continue;
-        }
+        g_pCompositor->moveWorkspaceToMonitor(workspace, monitor);
+        workspace->m_bPersistent = true;
+    }
 
-        int workspaceIndex = monitor->ID * workspaceCount + 1;
+    if (!g_keepFocused || g_firstLoad) {
+        // we also want to switch to the first workspace when the plugin is first loaded
+        HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(workspaceIndex));
+    }
+}
 
-        std::string logMessage =
-            "[split-monitor-workspaces] Mapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + workspaceCount - 1) + " to monitor " + monitor->szName;
-        raiseNotification(logMessage);
-        Debug::log(INFO, "{}", logMessage);
+void unmapMonitor(CMonitor* monitor)
+{
+    int workspaceIndex = monitor->ID * g_workspaceCount + 1;
 
-        for (int i = workspaceIndex; i < workspaceIndex + workspaceCount; i++) {
-            std::string workspaceName = std::to_string(i);
-            g_vMonitorWorkspaceMap[monitor->ID].push_back(workspaceName);
+    Debug::log(INFO, "{}",
+               "[split-monitor-workspaces] Unmapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + g_workspaceCount - 1) + " from monitor " + monitor->szName);
+
+    if (g_vMonitorWorkspaceMap.contains(monitor->ID)) {
+        for (const auto& workspaceName : g_vMonitorWorkspaceMap[monitor->ID]) {
             PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
 
-            if (workspace != nullptr) {
-                g_pCompositor->moveWorkspaceToMonitor(workspace, monitor.get());
+            if (workspace.get() != nullptr) {
+                workspace->m_bPersistent = false;
             }
-
-            // The plugin can't persistently set the workspace rules, so we have to also write them to a file manually
-            workspaceRules.emplace_back("workspace = " + workspaceName + ",monitor:" + monitor->szName + ",persistent:true");
         }
-
-        if (keepFocused == 0) {
-            HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(workspaceIndex));
-        }
+        g_vMonitorWorkspaceMap.erase(monitor->ID);
     }
-    writeWorkspaceRules(workspaceRules);
-    HyprlandAPI::reloadConfig();
 }
 
-void refreshMapping(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/) // NOLINT(performance-unnecessary-value-param)
+void unmapAllMonitors()
 {
-    mapWorkspacesToMonitors();
+    while (!g_vMonitorWorkspaceMap.empty()) {
+        auto [monitorID, workspaces] = *g_vMonitorWorkspaceMap.begin();
+        auto* monitor = g_pCompositor->getMonitorFromID(monitorID);
+        if (monitor != nullptr) {
+            unmapMonitor(monitor); // will remove the monitor from the map
+        }
+        else {
+            g_vMonitorWorkspaceMap.erase(monitorID); // remove it manually
+        }
+    }
+    g_vMonitorWorkspaceMap.clear();
+}
+
+void remapAllMonitors()
+{
+    raiseNotification("[split-monitor-workspaces] Remapping workspaces...");
+    unmapAllMonitors();
+    for (const auto& monitor : g_pCompositor->m_vMonitors) {
+        mapMonitor(monitor.get());
+    }
+}
+
+void loadConfigValues()
+{
+    g_enableNotifications = getParamValue(k_enableNotifications) != 0;
+    g_keepFocused = getParamValue(k_keepFocused) != 0;
+    g_workspaceCount = getParamValue(k_workspaceCount);
+}
+
+void reload()
+{
+    loadConfigValues();
+    remapAllMonitors();
+    g_firstLoad = false;
+}
+
+void monitorAddedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param)
+{ // NOLINT(performance-unnecessary-value-param)
+    auto* monitor = std::any_cast<CMonitor*>(param);
+    if (monitor == nullptr) {
+        Debug::log(WARN, "[split-monitor-workspaces] Monitor added callback called with nullptr?");
+        return;
+    }
+    mapMonitor(monitor);
+}
+
+void monitorRemovedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param) // NOLINT(performance-unnecessary-value-param)
+{
+    auto* monitor = std::any_cast<CMonitor*>(param);
+    if (monitor == nullptr) {
+        Debug::log(WARN, "[split-monitor-workspaces] Monitor removed callback called with nullptr?");
+        return;
+    }
+    unmapMonitor(monitor);
 }
 
 void configReloadedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/) // NOLINT(performance-unnecessary-value-param)
 {
     // anything you call in this function should not reload the config, as it will cause an infinite loop
     Debug::log(INFO, "[split-monitor-workspaces] Config reloaded");
-    g_enableNotifications = getIsNotificationsEnabled();
     raiseNotification("[split-monitor-workspaces] Config reloaded");
-    fixWorkspaceArrangement();
+    reload();
 }
 
 // Do NOT change this function.
@@ -316,26 +318,24 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitor", splitChangeMonitor);
     HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitorsilent", splitChangeMonitorSilent);
 
+    // reload the config before adding the callback, so we can already use the config's values we defined above
     HyprlandAPI::reloadConfig();
     g_pConfigManager->tick();
+    loadConfigValues();
 
-    g_enableNotifications = getIsNotificationsEnabled();
-    Debug::log(INFO, "[split-monitor-workspaces] Notifications are {}", g_enableNotifications ? "enabled" : "disabled");
-    mapWorkspacesToMonitors();
-
-    raiseNotification("[split-monitor-workspaces] Initialized successfully!");
-
-    e_monitorAddedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorAdded", refreshMapping);
-    e_monitorRemovedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorRemoved", refreshMapping);
+    e_monitorAddedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorAdded", monitorAddedCallback);
+    e_monitorRemovedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorRemoved", monitorRemovedCallback);
     e_configReloadedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "configReloaded", configReloadedCallback);
 
-    return {"split-monitor-workspaces", "Split monitor workspace namespaces", "Duckonaut", "1.1.0"};
+    // initial mapping of the workspaces will happen after plugin initialization, through the configReloadedCallback
+    // this is because Hyprland will automatically force a config reload after the plugin is loaded
+
+    raiseNotification("[split-monitor-workspaces] Initialized successfully!");
+    return {"split-monitor-workspaces", "Split monitor workspace namespaces", "Duckonaut", "1.2.0"};
 }
 
 APICALL EXPORT void PLUGIN_EXIT()
 {
-    writeWorkspaceRules({});
+    unmapAllMonitors();
     raiseNotification("[split-monitor-workspaces] Unloaded successfully!");
-
-    g_vMonitorWorkspaceMap.clear();
 }
