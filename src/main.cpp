@@ -51,16 +51,11 @@ int getParamValue(const char* paramName)
 
 const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string& workspace)
 {
-    // if the workspace is "empty", we expect the new ID to be the next available ID on the given monitor (not the next ID in the global list)
+    // if the workspace is "empty", we expect the new ID to be the first available ID on the given monitor (not the first ID in the global list)
     if (workspace == "empty") {
         // get the next workspace ID that is empty on this monitor
-        PHLWORKSPACE activeWorkspace = monitor->activeWorkspace;
         for (const auto& workspaceName : g_vMonitorWorkspaceMap[monitor->ID]) {
             PHLWORKSPACE workspacePtr = g_pCompositor->getWorkspaceByName(workspaceName);
-            if (workspacePtr == activeWorkspace) {
-                // skip the currently active workspace
-                continue;
-            }
             // the workspace we want is either not yet created (=nullptr) or already created but empty (!= nullptr but no windows)
             if (workspacePtr == nullptr || g_pCompositor->getWindowsOnWorkspace(workspacePtr->m_iID) == 0) {
                 return workspaceName;
