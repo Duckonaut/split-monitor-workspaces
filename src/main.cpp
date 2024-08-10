@@ -195,13 +195,13 @@ void mapMonitor(CMonitor* monitor)
     for (int i = workspaceIndex; i < workspaceIndex + g_workspaceCount; i++) {
         std::string workspaceName = std::to_string(i);
         g_vMonitorWorkspaceMap[monitor->ID].push_back(workspaceName);
-        PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
-
-        if (workspace.get() == nullptr) {
-            workspace = g_pCompositor->createNewWorkspace(i, monitor->ID);
-        }
-        g_pCompositor->moveWorkspaceToMonitor(workspace, monitor);
         if (g_enablePersistentWorkspaces) {
+            PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
+
+            if (workspace.get() == nullptr) {
+                workspace = g_pCompositor->createNewWorkspace(i, monitor->ID);
+            }
+            g_pCompositor->moveWorkspaceToMonitor(workspace, monitor);
             workspace->m_bPersistent = true;
         }
     }
