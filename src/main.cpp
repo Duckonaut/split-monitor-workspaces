@@ -16,9 +16,11 @@
 auto constexpr k_workspaceCount = "plugin:split-monitor-workspaces:count";
 auto constexpr k_keepFocused = "plugin:split-monitor-workspaces:keep_focused";
 auto constexpr k_enableNotifications = "plugin:split-monitor-workspaces:enable_notifications";
+auto constexpr k_enablePersistentWorkspaces = "plugin:split-monitor-workspaces:enable_persistent_workspaces";
 
 const CColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
 bool g_enableNotifications = false;
+bool g_enablePersistentWorkspaces = true;
 bool g_keepFocused = false;
 int g_workspaceCount;
 
@@ -199,7 +201,9 @@ void mapMonitor(CMonitor* monitor)
             workspace = g_pCompositor->createNewWorkspace(i, monitor->ID);
         }
         g_pCompositor->moveWorkspaceToMonitor(workspace, monitor);
-        workspace->m_bPersistent = true;
+        if (g_enablePersistentWorkspaces) {
+            workspace->m_bPersistent = true;
+        }
     }
 
     if (!g_keepFocused || g_firstLoad) {
@@ -254,6 +258,7 @@ void remapAllMonitors()
 void loadConfigValues()
 {
     g_enableNotifications = getParamValue(k_enableNotifications) != 0;
+    g_enablePersistentWorkspaces = getParamValue(k_enablePersistentWorkspaces) != 0;
     g_keepFocused = getParamValue(k_keepFocused) != 0;
     g_workspaceCount = getParamValue(k_workspaceCount);
 }
@@ -306,6 +311,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addConfigValue(PHANDLE, k_workspaceCount, Hyprlang::INT{10});
     HyprlandAPI::addConfigValue(PHANDLE, k_keepFocused, Hyprlang::INT{0});
     HyprlandAPI::addConfigValue(PHANDLE, k_enableNotifications, Hyprlang::INT{0});
+    HyprlandAPI::addConfigValue(PHANDLE, k_enablePersistentWorkspaces, Hyprlang::INT{1});
 
     HyprlandAPI::addDispatcher(PHANDLE, "split-workspace", splitWorkspace);
     HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspace", splitMoveToWorkspace);
