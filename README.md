@@ -143,7 +143,7 @@ plugin {
         count = 5
         keep_focused = 0
         enable_notifications = 0
-        enable_persistent_workspace = 1
+        enable_persistent_workspaces = 1
     }
 }
 
