@@ -118,6 +118,7 @@ And two new ones, to move windows between monitors
 
 | Normal                    | Arguments         |
 |---------------------------|-------------------|
+| split-cycleworkspaces     | next/prev/+1/-1    |
 | split-changemonitor       | next/prev/+1/-1    |
 | split-changemonitorsilent | next/prev/+1/-1    |
 
