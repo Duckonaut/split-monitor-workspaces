@@ -48,7 +48,7 @@ int getDelta(const std::string& direction)
     if (direction == "prev" || direction == "-1") {
         return -1;
     }
-	// fallback if input is incorrect
+    // fallback if input is incorrect
     return 0;
 }
 
@@ -120,27 +120,30 @@ void splitWorkspace(const std::string& workspace)
 
 void splitCycleWorkspaces(const std::string& value)
 {
-    int delta = getDelta(value);
-	if (delta == 0) {
-		return;
-	}
-    auto* monitor = getCurrentMonitor();
-	auto workspaces = g_vMonitorWorkspaceMap[monitor->ID];
-	int index = -1;
-	for (int i = 0; i < g_workspaceCount; i++) {
-		if (workspaces[i] == monitor->activeWorkspace->m_szName) {
-			index = i;
-			break;
-		}
-	}
-	if (index == -1)
-		return;
+    int const delta = getDelta(value);
+    if (delta == 0) {
+        Debug::log(WARN, "[split-monitor-workspaces] Invalid cycle value: {}", value.c_str());
+        return;
+    }
+    auto* const monitor = getCurrentMonitor();
+    auto const workspaces = g_vMonitorWorkspaceMap[monitor->ID];
+    int index = -1;
+    for (int i = 0; i < g_workspaceCount; i++) {
+        if (workspaces[i] == monitor->activeWorkspace->m_szName) {
+            index = i;
+            break;
+        }
+    }
+    if (index == -1) {
+        Debug::log(WARN, "[split-monitor-workspaces] Could not find active workspace in monitor workspaces. Aborting cycle.");
+        return;
+    }
 
-	index += delta;
+    index += delta;
     if (index < 0)
         index = g_workspaceCount - 1;
     else if (index >= g_workspaceCount)
-		index = 0;
+        index = 0;
 
     HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + workspaces[index]);
 }
