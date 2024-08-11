@@ -166,15 +166,8 @@ void changeMonitor(bool quiet, const std::string& value)
 
     uint64_t monitorCount = g_pCompositor->m_vMonitors.size();
 
-    int delta = 0;
-
-    if (value == "next" || value == "+1") {
-        delta = 1;
-    }
-    else if (value == "prev" || value == "-1") {
-        delta = -1;
-    }
-    else {
+    int const delta = getDelta(value);
+    if (delta == 0) {
         Debug::log(WARN, "[split-monitor-workspaces] Invalid monitor value: {}", value.c_str());
         return;
     }
