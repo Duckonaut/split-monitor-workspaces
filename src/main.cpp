@@ -40,6 +40,18 @@ void raiseNotification(const std::string& message, float timeout = 5000.0F)
     }
 }
 
+int getDelta(const std::string& direction)
+{
+    if (direction == "next" || direction == "+1" || direction == "1") {
+        return 1;
+    }
+    if (direction == "prev" || direction == "-1") {
+        return -1;
+    }
+    // fallback if input is incorrect
+    return 0;
+}
+
 int getParamValue(const char* paramName)
 {
     Debug::log(INFO, "[split-monitor-workspaces] Getting config value {}", paramName);
@@ -106,6 +118,36 @@ void splitWorkspace(const std::string& workspace)
     HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
 }
 
+void splitCycleWorkspaces(const std::string& value)
+{
+    int const delta = getDelta(value);
+    if (delta == 0) {
+        Debug::log(WARN, "[split-monitor-workspaces] Invalid cycle value: {}", value.c_str());
+        return;
+    }
+    auto* const monitor = getCurrentMonitor();
+    auto const workspaces = g_vMonitorWorkspaceMap[monitor->ID];
+    int index = -1;
+    for (int i = 0; i < g_workspaceCount; i++) {
+        if (workspaces[i] == monitor->activeWorkspace->m_szName) {
+            index = i;
+            break;
+        }
+    }
+    if (index == -1) {
+        Debug::log(WARN, "[split-monitor-workspaces] Could not find active workspace in monitor workspaces. Aborting cycle.");
+        return;
+    }
+
+    index += delta;
+    if (index < 0)
+        index = g_workspaceCount - 1;
+    else if (index >= g_workspaceCount)
+        index = 0;
+
+    HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + workspaces[index]);
+}
+
 void splitMoveToWorkspace(const std::string& workspace)
 {
     HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
@@ -124,15 +166,8 @@ void changeMonitor(bool quiet, const std::string& value)
 
     uint64_t monitorCount = g_pCompositor->m_vMonitors.size();
 
-    int delta = 0;
-
-    if (value == "next" || value == "+1") {
-        delta = 1;
-    }
-    else if (value == "prev" || value == "-1") {
-        delta = -1;
-    }
-    else {
+    int const delta = getDelta(value);
+    if (delta == 0) {
         Debug::log(WARN, "[split-monitor-workspaces] Invalid monitor value: {}", value.c_str());
         return;
     }
@@ -314,6 +349,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addConfigValue(PHANDLE, k_enablePersistentWorkspaces, Hyprlang::INT{1});
 
     HyprlandAPI::addDispatcher(PHANDLE, "split-workspace", splitWorkspace);
+    HyprlandAPI::addDispatcher(PHANDLE, "split-cycleworkspaces", splitCycleWorkspaces);
     HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspace", splitMoveToWorkspace);
     HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspacesilent", splitMoveToWorkspaceSilent);
     HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitor", splitChangeMonitor);
