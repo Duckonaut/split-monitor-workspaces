@@ -237,9 +237,9 @@ void mapMonitor(CMonitor* monitor)
         }
         if (workspace.get() != nullptr) {
             g_pCompositor->moveWorkspaceToMonitor(workspace, monitor);
-        }
-        if (g_enablePersistentWorkspaces) {
-            workspace->m_bPersistent = true;
+            if (g_enablePersistentWorkspaces) {
+                workspace->m_bPersistent = true;
+            }
         }
     }
 
