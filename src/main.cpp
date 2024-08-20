@@ -232,10 +232,14 @@ void mapMonitor(CMonitor* monitor)
         g_vMonitorWorkspaceMap[monitor->ID].push_back(workspaceName);
         PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
 
-        if (workspace.get() == nullptr && g_enablePersistentWorkspaces) {
+        // when not using persistent workspaces, we still want to create the first workspace on each monitor
+        // to avoid issues where only the last mapped monitor has the correct workspace (#121)
+        if (workspace.get() == nullptr && (g_enablePersistentWorkspaces || i == workspaceIndex)) {
+            Debug::log(INFO, "[split-monitor-workspaces] Creating workspace {}", workspaceName);
             workspace = g_pCompositor->createNewWorkspace(i, monitor->ID);
         }
         if (workspace.get() != nullptr) {
+            Debug::log(INFO, "[split-monitor-workspaces] Moving workspace {} to monitor {}", workspaceName, monitor->szName);
             g_pCompositor->moveWorkspaceToMonitor(workspace, monitor);
             if (g_enablePersistentWorkspaces) {
                 workspace->m_bPersistent = true;
@@ -245,6 +249,7 @@ void mapMonitor(CMonitor* monitor)
 
     if (!g_keepFocused || g_firstLoad) {
         // we also want to switch to the first workspace when the plugin is first loaded
+        Debug::log(INFO, "[split-monitor-workspaces] Switching to first workspace on monitor {}", monitor->szName);
         HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(workspaceIndex));
     }
 }
