@@ -128,7 +128,7 @@ It also provides the following config values
 | `plugin:split-monitor-workspaces:count`                         | int       | 10        | How many workspaces to bind to the monitor            |
 | `plugin:split-monitor-workspaces:keep_focused`                  | boolean   | 0         | Keep current workspaces focused on plugin init/reload |
 | `plugin:split-monitor-workspaces:enable_notifications`          | boolean   | 0         | Enable notifications                                  |
-| `plugin:split-monitor-workspaces:enable_persistent_workspaces`  | boolean   | 1         | Enable management of persistent workspaces            |
+| `plugin:split-monitor-workspaces:enable_persistent_workspaces`  | boolean   | 1         | Enable management of persistent workspaces. This means the plugin will at initialization create `$count` workspaces on each monitor and make them persistent. |
 
 Keep in mind that if you're using, for example, the `wlr/workspaces` widgets in [waybar](https://github.com/Alexays/Waybar), this will require a change to your config. You should set `all-outputs` to `false`, and adjust the icon mapping.
 
