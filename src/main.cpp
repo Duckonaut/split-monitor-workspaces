@@ -63,7 +63,7 @@ int getParamValue(const char* paramName)
     return **paramPtr;
 }
 
-const std::string& getWorkspaceFromMonitor(PHLMONITOR monitor, const std::string& workspace)
+const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std::string& workspace)
 {
     // if the workspace is "empty", we expect the new ID to be the first available ID on the given monitor (not the first ID in the global list)
     if (workspace == "empty") {
@@ -210,7 +210,7 @@ void splitChangeMonitor(const std::string& value)
     changeMonitor(false, value);
 }
 
-void mapMonitor(PHLMONITOR monitor) // NOLINT(readability-convert-member-functions-to-static)
+void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-functions-to-static)
 {
     if (monitor->activeMonitorRule.disabled) {
         Debug::log(INFO, "[split-monitor-workspaces] Skipping disabled monitor {}", monitor->szName);
@@ -254,7 +254,7 @@ void mapMonitor(PHLMONITOR monitor) // NOLINT(readability-convert-member-functio
     }
 }
 
-void unmapMonitor(PHLMONITOR monitor)
+void unmapMonitor(const PHLMONITOR& monitor)
 {
     int workspaceIndex = monitor->ID * g_workspaceCount + 1;
 
@@ -314,7 +314,7 @@ void reload()
 
 void monitorAddedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param)
 { // NOLINT(performance-unnecessary-value-param)
-    PHLMONITOR monitor = std::any_cast<PHLMONITOR>(param);
+    auto monitor = std::any_cast<PHLMONITOR>(param);
     if (monitor == nullptr) {
         Debug::log(WARN, "[split-monitor-workspaces] Monitor added callback called with nullptr?");
         return;
@@ -324,7 +324,7 @@ void monitorAddedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any 
 
 void monitorRemovedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param) // NOLINT(performance-unnecessary-value-param)
 {
-    PHLMONITOR monitor = std::any_cast<PHLMONITOR>(param);
+    auto monitor = std::any_cast<PHLMONITOR>(param);
     if (monitor == nullptr) {
         Debug::log(WARN, "[split-monitor-workspaces] Monitor removed callback called with nullptr?");
         return;
