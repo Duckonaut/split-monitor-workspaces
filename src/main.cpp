@@ -63,7 +63,7 @@ int getParamValue(const char* paramName)
     return **paramPtr;
 }
 
-const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string& workspace)
+const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std::string& workspace)
 {
     // if the workspace is "empty", we expect the new ID to be the first available ID on the given monitor (not the first ID in the global list)
     if (workspace == "empty") {
@@ -102,10 +102,10 @@ const std::string& getWorkspaceFromMonitor(CMonitor* monitor, const std::string&
     return g_vMonitorWorkspaceMap[monitor->ID][workspaceIndex];
 }
 
-CMonitor* getCurrentMonitor()
+PHLMONITOR getCurrentMonitor()
 {
     // get last focused monitor, because some people switch monitors with a keybind while the cursor is on a different monitor
-    if (CMonitor* monitor = g_pCompositor->m_pLastMonitor.lock().get()) {
+    if (PHLMONITOR monitor = g_pCompositor->m_pLastMonitor.lock()) {
         return monitor;
     }
     Debug::log(WARN, "[split-monitor-workspaces] Last monitor does not exist, falling back to cursor's monitor");
@@ -125,7 +125,7 @@ void splitCycleWorkspaces(const std::string& value)
         Debug::log(WARN, "[split-monitor-workspaces] Invalid cycle value: {}", value.c_str());
         return;
     }
-    auto* const monitor = getCurrentMonitor();
+    PHLMONITOR const monitor = getCurrentMonitor();
     auto const workspaces = g_vMonitorWorkspaceMap[monitor->ID];
     int index = -1;
     for (int i = 0; i < g_workspaceCount; i++) {
@@ -160,9 +160,9 @@ void splitMoveToWorkspaceSilent(const std::string& workspace)
 
 void changeMonitor(bool quiet, const std::string& value)
 {
-    CMonitor* monitor = getCurrentMonitor();
+    PHLMONITOR monitor = getCurrentMonitor();
 
-    CMonitor* nextMonitor = nullptr;
+    PHLMONITOR nextMonitor = nullptr;
 
     uint64_t monitorCount = g_pCompositor->m_vMonitors.size();
 
@@ -176,7 +176,7 @@ void changeMonitor(bool quiet, const std::string& value)
     // as there would be gaps in the monitorID sequence
     int currentMonitorIndex = -1;
     for (size_t i = 0; i < g_pCompositor->m_vMonitors.size(); i++) {
-        if (g_pCompositor->m_vMonitors[i].get() == monitor) {
+        if (g_pCompositor->m_vMonitors[i] == monitor) {
             currentMonitorIndex = i;
             break;
         }
@@ -188,7 +188,7 @@ void changeMonitor(bool quiet, const std::string& value)
 
     int nextMonitorIndex = (monitorCount + currentMonitorIndex + delta) % monitorCount;
 
-    nextMonitor = g_pCompositor->m_vMonitors[nextMonitorIndex].get();
+    nextMonitor = g_pCompositor->m_vMonitors[nextMonitorIndex];
 
     int nextWorkspaceID = nextMonitor->activeWorkspace->m_iID;
 
@@ -210,7 +210,7 @@ void splitChangeMonitor(const std::string& value)
     changeMonitor(false, value);
 }
 
-void mapMonitor(CMonitor* monitor)
+void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-functions-to-static)
 {
     if (monitor->activeMonitorRule.disabled) {
         Debug::log(INFO, "[split-monitor-workspaces] Skipping disabled monitor {}", monitor->szName);
@@ -230,24 +230,31 @@ void mapMonitor(CMonitor* monitor)
     for (int i = workspaceIndex; i < workspaceIndex + g_workspaceCount; i++) {
         std::string workspaceName = std::to_string(i);
         g_vMonitorWorkspaceMap[monitor->ID].push_back(workspaceName);
-        if (g_enablePersistentWorkspaces) {
-            PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
+        PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
 
-            if (workspace.get() == nullptr) {
-                workspace = g_pCompositor->createNewWorkspace(i, monitor->ID);
-            }
+        // when not using persistent workspaces, we still want to create the first workspace on each monitor
+        // to avoid issues where only the last mapped monitor has the correct workspace (#121)
+        if (workspace.get() == nullptr && (g_enablePersistentWorkspaces || i == workspaceIndex)) {
+            Debug::log(INFO, "[split-monitor-workspaces] Creating workspace {}", workspaceName);
+            workspace = g_pCompositor->createNewWorkspace(i, monitor->ID);
+        }
+        if (workspace.get() != nullptr) {
+            Debug::log(INFO, "[split-monitor-workspaces] Moving workspace {} to monitor {}", workspaceName, monitor->szName);
             g_pCompositor->moveWorkspaceToMonitor(workspace, monitor);
-            workspace->m_bPersistent = true;
+            if (g_enablePersistentWorkspaces) {
+                workspace->m_bPersistent = true;
+            }
         }
     }
 
     if (!g_keepFocused || g_firstLoad) {
         // we also want to switch to the first workspace when the plugin is first loaded
+        Debug::log(INFO, "[split-monitor-workspaces] Switching to first workspace on monitor {}", monitor->szName);
         HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(workspaceIndex));
     }
 }
 
-void unmapMonitor(CMonitor* monitor)
+void unmapMonitor(const PHLMONITOR& monitor)
 {
     int workspaceIndex = monitor->ID * g_workspaceCount + 1;
 
@@ -270,7 +277,7 @@ void unmapAllMonitors()
 {
     while (!g_vMonitorWorkspaceMap.empty()) {
         auto [monitorID, workspaces] = *g_vMonitorWorkspaceMap.begin();
-        auto* monitor = g_pCompositor->getMonitorFromID(monitorID);
+        PHLMONITOR monitor = g_pCompositor->getMonitorFromID(monitorID);
         if (monitor != nullptr) {
             unmapMonitor(monitor); // will remove the monitor from the map
         }
@@ -285,8 +292,8 @@ void remapAllMonitors()
 {
     raiseNotification("[split-monitor-workspaces] Remapping workspaces...");
     unmapAllMonitors();
-    for (const auto& monitor : g_pCompositor->m_vMonitors) {
-        mapMonitor(monitor.get());
+    for (const PHLMONITOR& monitor : g_pCompositor->m_vMonitors) {
+        mapMonitor(monitor);
     }
 }
 
@@ -307,7 +314,7 @@ void reload()
 
 void monitorAddedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param)
 { // NOLINT(performance-unnecessary-value-param)
-    auto* monitor = std::any_cast<CMonitor*>(param);
+    auto monitor = std::any_cast<PHLMONITOR>(param);
     if (monitor == nullptr) {
         Debug::log(WARN, "[split-monitor-workspaces] Monitor added callback called with nullptr?");
         return;
@@ -317,7 +324,7 @@ void monitorAddedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any 
 
 void monitorRemovedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param) // NOLINT(performance-unnecessary-value-param)
 {
-    auto* monitor = std::any_cast<CMonitor*>(param);
+    auto monitor = std::any_cast<PHLMONITOR>(param);
     if (monitor == nullptr) {
         Debug::log(WARN, "[split-monitor-workspaces] Monitor removed callback called with nullptr?");
         return;

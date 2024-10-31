@@ -20,7 +20,7 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
-        sudo -u user sh -c "paru -Syu --noconfirm aquamarine-git hyprland-git"
+        sudo -u user sh -c "paru -Syu --noconfirm aquamarine-git hyprland-git hyprutils-git hyprwayland-scanner-git"
 
     - name: Checkout current repository
       uses: actions/checkout@v4
