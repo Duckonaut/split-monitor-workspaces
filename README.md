@@ -22,15 +22,6 @@ hyprpm enable split-monitor-workspaces # Enable the plugin
 hyprpm reload # Reload the plugins
 ```
 
-## Using [hyprload](https://github.com/Duckonaut/hyprload)
-Add the line `"Duckonaut/split-monitor-workspaces",` to your `hyprload.toml` config, like this
-```toml
-plugins = [
-    "Duckonaut/split-monitor-workspaces",
-]
-```
-Then update via the `hyprload,update` dispatcher
-
 ## Manual installation
 
 1. Export the `HYPRLAND_HEADERS` variable to point to the root directory of the Hyprland repo
