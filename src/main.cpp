@@ -71,7 +71,7 @@ const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std:
         for (const auto& workspaceName : g_vMonitorWorkspaceMap[monitor->ID]) {
             PHLWORKSPACE workspacePtr = g_pCompositor->getWorkspaceByName(workspaceName);
             // the workspace we want is either not yet created (=nullptr) or already created but empty (!= nullptr but no windows)
-            if (workspacePtr == nullptr || g_pCompositor->getWindowsOnWorkspace(workspacePtr->m_iID) == 0) {
+            if (workspacePtr == nullptr || workspacePtr->getWindows() == 0) {
                 return workspaceName;
             }
         }
