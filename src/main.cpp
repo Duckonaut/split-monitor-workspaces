@@ -18,7 +18,7 @@ auto constexpr k_keepFocused = "plugin:split-monitor-workspaces:keep_focused";
 auto constexpr k_enableNotifications = "plugin:split-monitor-workspaces:enable_notifications";
 auto constexpr k_enablePersistentWorkspaces = "plugin:split-monitor-workspaces:enable_persistent_workspaces";
 
-const CColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
+const CHyprColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
 bool g_enableNotifications = false;
 bool g_enablePersistentWorkspaces = true;
 bool g_keepFocused = false;
