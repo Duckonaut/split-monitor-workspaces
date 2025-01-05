@@ -8,6 +8,7 @@
 #include <hyprutils/memory/SharedPtr.hpp>
 
 #include "globals.hpp"
+#include "helpers.hpp"
 
 #include <map>
 #include <unistd.h>
@@ -23,6 +24,7 @@ bool g_enableNotifications = false;
 bool g_enablePersistentWorkspaces = true;
 bool g_keepFocused = false;
 int g_workspaceCount;
+std::vector<std::string> g_monitorOrder;
 
 // the first time we load the plugin, we want to switch to the first workspace on the first monitor regardless of keepFocused
 bool g_firstLoad = true;
@@ -40,25 +42,15 @@ void raiseNotification(const std::string& message, float timeout = 5000.0F)
     }
 }
 
-int getDelta(const std::string& direction)
-{
-    if (direction == "next" || direction == "+1" || direction == "1") {
-        return 1;
-    }
-    if (direction == "prev" || direction == "-1") {
-        return -1;
-    }
-    // fallback if input is incorrect
-    return 0;
-}
 
-int getParamValue(const char* paramName)
+template <typename HyprlangType, typename ReturnValue> //
+ReturnValue getParamValue(const char* paramName)
 {
     Debug::log(INFO, "[split-monitor-workspaces] Getting config value {}", paramName);
-    const auto* const paramPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, paramName)->getDataStaticPtr();
+    const auto* const paramPtr = (HyprlangType* const*)HyprlandAPI::getConfigValue(PHANDLE, paramName)->getDataStaticPtr();
     if (paramPtr == nullptr) {
         Debug::log(WARN, "[split-monitor-workspaces] Failed to get config value {}", paramName);
-        return 0;
+        return {};
     }
     return **paramPtr;
 }
@@ -121,7 +113,7 @@ SDispatchResult splitWorkspace(const std::string& workspace)
 
 SDispatchResult splitCycleWorkspaces(const std::string& value)
 {
-    int const delta = getDelta(value);
+    int const delta = helpers::getDelta(value);
     if (delta == 0) {
         Debug::log(WARN, "[split-monitor-workspaces] Invalid cycle value: {}", value.c_str());
         return {.success = false, .error = "Invalid cycle value: " + value};
@@ -170,7 +162,7 @@ SDispatchResult changeMonitor(bool quiet, const std::string& value)
 
     uint64_t monitorCount = g_pCompositor->m_vMonitors.size();
 
-    int const delta = getDelta(value);
+    int const delta = helpers::getDelta(value);
     if (delta == 0) {
         Debug::log(WARN, "[split-monitor-workspaces] Invalid monitor value: {}", value.c_str());
         return {.success = false, .error = "Invalid monitor value: " + value};
@@ -305,10 +297,17 @@ void remapAllMonitors()
 
 void loadConfigValues()
 {
-    g_enableNotifications = getParamValue(k_enableNotifications) != 0;
-    g_enablePersistentWorkspaces = getParamValue(k_enablePersistentWorkspaces) != 0;
-    g_keepFocused = getParamValue(k_keepFocused) != 0;
-    g_workspaceCount = getParamValue(k_workspaceCount);
+    g_enableNotifications = getParamValue<Hyprlang::INT, int>(k_enableNotifications) != 0;
+    g_enablePersistentWorkspaces = getParamValue<Hyprlang::INT, int>(k_enablePersistentWorkspaces) != 0;
+    g_keepFocused = getParamValue<Hyprlang::INT, int>(k_keepFocused) != 0;
+    g_workspaceCount = static_cast<int>(getParamValue<Hyprlang::INT, bool>(k_workspaceCount));
+    auto monitorOrder = getParamValue<Hyprlang::STRING, std::string>("plugin:split-monitor-workspaces:monitor_order");
+    if (monitorOrder.empty()) {
+        g_monitorOrder.clear();
+    }
+    else {
+        g_monitorOrder = helpers::splitString(monitorOrder, ',');
+    }
 }
 
 void reload()
