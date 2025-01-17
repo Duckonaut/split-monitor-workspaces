@@ -22,15 +22,6 @@ hyprpm enable split-monitor-workspaces # Enable the plugin
 hyprpm reload # Reload the plugins
 ```
 
-## Using [hyprload](https://github.com/Duckonaut/hyprload)
-Add the line `"Duckonaut/split-monitor-workspaces",` to your `hyprload.toml` config, like this
-```toml
-plugins = [
-    "Duckonaut/split-monitor-workspaces",
-]
-```
-Then update via the `hyprload,update` dispatcher
-
 ## Manual installation
 
 1. Export the `HYPRLAND_HEADERS` variable to point to the root directory of the Hyprland repo
@@ -130,7 +121,21 @@ It also provides the following config values
 | `plugin:split-monitor-workspaces:enable_notifications`          | boolean   | 0         | Enable notifications                                  |
 | `plugin:split-monitor-workspaces:enable_persistent_workspaces`  | boolean   | 1         | Enable management of persistent workspaces. This means the plugin will at initialization create `$count` workspaces on each monitor and make them persistent. |
 
-Keep in mind that if you're using, for example, the `wlr/workspaces` widgets in [waybar](https://github.com/Alexays/Waybar), this will require a change to your config. You should set `all-outputs` to `false`, and adjust the icon mapping.
+This plugin supports [waybar's](https://github.com/Alexays/Waybar) `hyprland/workspaces` module. You can configure it like this:
+
+```
+"hyprland/workspaces": {
+    "format": "{icon}",
+    "format-icons": {
+      "urgent": "",
+      "active": "", // focused workspace on current monitor 
+      "visible": "", // focused workspace on other monitors
+      "default": "",
+      "empty": "" // persistent (created by this plugin)
+    },
+    "all-outputs": false // recommended
+  },
+```
 
 If your workspace-per-monitor count is 10, the first monitor will have workspaces 1-10, the second 11-20 and so on. They will be accessed via numbers 1-10 while your mouse is on a given monitor.
 

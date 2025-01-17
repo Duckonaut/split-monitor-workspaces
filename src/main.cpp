@@ -113,17 +113,18 @@ PHLMONITOR getCurrentMonitor()
     return g_pCompositor->getMonitorFromCursor();
 }
 
-void splitWorkspace(const std::string& workspace)
+SDispatchResult splitWorkspace(const std::string& workspace)
 {
-    HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+    auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+    return {.success = result == "ok", .error = result};
 }
 
-void splitCycleWorkspaces(const std::string& value)
+SDispatchResult splitCycleWorkspaces(const std::string& value)
 {
     int const delta = getDelta(value);
     if (delta == 0) {
         Debug::log(WARN, "[split-monitor-workspaces] Invalid cycle value: {}", value.c_str());
-        return;
+        return {.success = false, .error = "Invalid cycle value: " + value};
     }
     PHLMONITOR const monitor = getCurrentMonitor();
     auto const workspaces = g_vMonitorWorkspaceMap[monitor->ID];
@@ -136,7 +137,7 @@ void splitCycleWorkspaces(const std::string& value)
     }
     if (index == -1) {
         Debug::log(WARN, "[split-monitor-workspaces] Could not find active workspace in monitor workspaces. Aborting cycle.");
-        return;
+        return {.success = false, .error = "Could not find active workspace in monitor workspaces"};
     }
 
     index += delta;
@@ -145,20 +146,23 @@ void splitCycleWorkspaces(const std::string& value)
     else if (index >= g_workspaceCount)
         index = 0;
 
-    HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + workspaces[index]);
+    auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + workspaces[index]);
+    return {.success = result == "ok", .error = result};
 }
 
-void splitMoveToWorkspace(const std::string& workspace)
+SDispatchResult splitMoveToWorkspace(const std::string& workspace)
 {
-    HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+    auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+    return {.success = result == "ok", .error = result};
 }
 
-void splitMoveToWorkspaceSilent(const std::string& workspace)
+SDispatchResult splitMoveToWorkspaceSilent(const std::string& workspace)
 {
-    HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+    auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+    return {.success = result == "ok", .error = result};
 }
 
-void changeMonitor(bool quiet, const std::string& value)
+SDispatchResult changeMonitor(bool quiet, const std::string& value)
 {
     PHLMONITOR monitor = getCurrentMonitor();
 
@@ -169,7 +173,7 @@ void changeMonitor(bool quiet, const std::string& value)
     int const delta = getDelta(value);
     if (delta == 0) {
         Debug::log(WARN, "[split-monitor-workspaces] Invalid monitor value: {}", value.c_str());
-        return;
+        return {.success = false, .error = "Invalid monitor value: " + value};
     }
 
     // The index is used instead of the monitorID because using the monitorID won't work if monitors are removed or mirrored
@@ -183,7 +187,7 @@ void changeMonitor(bool quiet, const std::string& value)
     }
     if (currentMonitorIndex == -1) {
         Debug::log(WARN, "[split-monitor-workspaces] Monitor ID {} not found in monitor list?", monitor->ID);
-        return;
+        return {.success = false, .error = "Monitor ID not found in monitor list: " + std::to_string(monitor->ID)};
     }
 
     int nextMonitorIndex = (monitorCount + currentMonitorIndex + delta) % monitorCount;
@@ -192,22 +196,24 @@ void changeMonitor(bool quiet, const std::string& value)
 
     int nextWorkspaceID = nextMonitor->activeWorkspace->m_iID;
 
+    std::string result;
     if (quiet) {
-        HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + std::to_string(nextWorkspaceID));
+        result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + std::to_string(nextWorkspaceID));
     }
     else {
-        HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + std::to_string(nextWorkspaceID));
+        result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + std::to_string(nextWorkspaceID));
     }
+    return {.success = result == "ok", .error = result};
 }
 
-void splitChangeMonitorSilent(const std::string& value)
+SDispatchResult splitChangeMonitorSilent(const std::string& value)
 {
-    changeMonitor(true, value);
+    return changeMonitor(true, value);
 }
 
-void splitChangeMonitor(const std::string& value)
+SDispatchResult splitChangeMonitor(const std::string& value)
 {
-    changeMonitor(false, value);
+    return changeMonitor(false, value);
 }
 
 void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-functions-to-static)
@@ -355,12 +361,12 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addConfigValue(PHANDLE, k_enableNotifications, Hyprlang::INT{0});
     HyprlandAPI::addConfigValue(PHANDLE, k_enablePersistentWorkspaces, Hyprlang::INT{1});
 
-    HyprlandAPI::addDispatcher(PHANDLE, "split-workspace", splitWorkspace);
-    HyprlandAPI::addDispatcher(PHANDLE, "split-cycleworkspaces", splitCycleWorkspaces);
-    HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspace", splitMoveToWorkspace);
-    HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspacesilent", splitMoveToWorkspaceSilent);
-    HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitor", splitChangeMonitor);
-    HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitorsilent", splitChangeMonitorSilent);
+    HyprlandAPI::addDispatcherV2(PHANDLE, "split-workspace", splitWorkspace);
+    HyprlandAPI::addDispatcherV2(PHANDLE, "split-cycleworkspaces", splitCycleWorkspaces);
+    HyprlandAPI::addDispatcherV2(PHANDLE, "split-movetoworkspace", splitMoveToWorkspace);
+    HyprlandAPI::addDispatcherV2(PHANDLE, "split-movetoworkspacesilent", splitMoveToWorkspaceSilent);
+    HyprlandAPI::addDispatcherV2(PHANDLE, "split-changemonitor", splitChangeMonitor);
+    HyprlandAPI::addDispatcherV2(PHANDLE, "split-changemonitorsilent", splitChangeMonitorSilent);
 
     // reload the config before adding the callback, so we can already use the config's values we defined above
     HyprlandAPI::reloadConfig();
