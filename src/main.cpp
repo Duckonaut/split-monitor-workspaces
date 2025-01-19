@@ -370,7 +370,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 
     // reload the config before adding the callback, so we can already use the config's values we defined above
     HyprlandAPI::reloadConfig();
-    g_pConfigManager->tick();
+    g_pConfigManager->reload();
     loadConfigValues();
 
     e_monitorAddedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorAdded", monitorAddedCallback);
