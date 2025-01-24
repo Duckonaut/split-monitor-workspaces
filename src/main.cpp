@@ -361,12 +361,12 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addConfigValue(PHANDLE, k_enableNotifications, Hyprlang::INT{0});
     HyprlandAPI::addConfigValue(PHANDLE, k_enablePersistentWorkspaces, Hyprlang::INT{1});
 
-    HyprlandAPI::addDispatcherV2(PHANDLE, "split-workspace", splitWorkspace);
-    HyprlandAPI::addDispatcherV2(PHANDLE, "split-cycleworkspaces", splitCycleWorkspaces);
-    HyprlandAPI::addDispatcherV2(PHANDLE, "split-movetoworkspace", splitMoveToWorkspace);
-    HyprlandAPI::addDispatcherV2(PHANDLE, "split-movetoworkspacesilent", splitMoveToWorkspaceSilent);
-    HyprlandAPI::addDispatcherV2(PHANDLE, "split-changemonitor", splitChangeMonitor);
-    HyprlandAPI::addDispatcherV2(PHANDLE, "split-changemonitorsilent", splitChangeMonitorSilent);
+    HyprlandAPI::addDispatcher(PHANDLE, "split-workspace", splitWorkspace);
+    HyprlandAPI::addDispatcher(PHANDLE, "split-cycleworkspaces", splitCycleWorkspaces);
+    HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspace", splitMoveToWorkspace);
+    HyprlandAPI::addDispatcher(PHANDLE, "split-movetoworkspacesilent", splitMoveToWorkspaceSilent);
+    HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitor", splitChangeMonitor);
+    HyprlandAPI::addDispatcher(PHANDLE, "split-changemonitorsilent", splitChangeMonitorSilent);
 
     // reload the config before adding the callback, so we can already use the config's values we defined above
     HyprlandAPI::reloadConfig();
