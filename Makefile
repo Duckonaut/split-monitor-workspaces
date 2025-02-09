@@ -3,8 +3,15 @@ PLUGIN_NAME=split-monitor-workspaces
 SOURCE_FILES=$(wildcard src/*.cpp)
 
 COMPILE_FLAGS=-g -fPIC --no-gnu-unique -std=c++23
-COMPILE_FLAGS+=`pkg-config --cflags pixman-1 libdrm hyprland`
+COMPILE_FLAGS+=`pkg-config --cflags pixman-1 libdrm`
 COMPILE_FLAGS+=-Iinclude
+
+ifeq ($(HYPRLAND_HEADERS),)
+COMPILE_FLAGS+=`pkg-config --cflags hyprland`
+else
+COMPILE_FLAGS+=-I"$(HYPRLAND_HEADERS)"
+COMPILE_FLAGS+=-I"$(HYPRLAND_HEADERS)/protocols/"
+endif
 
 COMPILE_DEFINES=-DWLR_USE_UNSTABLE
 
@@ -22,7 +29,13 @@ endif
 all: check_env $(PLUGIN_NAME).so
 
 check_env:
-	@if pkg-config --exists hyprland; then \
+	@if [ -n "$(HYPRLAND_HEADERS)" ]; then \
+		echo 'Using HYPRLAND_HEADERS enviroment variable to find Hyprland headers'; \
+		if [ ! -d "$(HYPRLAND_HEADERS)/protocols" ]; then \
+			echo 'Hyprland headers not found'; \
+			exit 1; \
+		fi; \
+	elif pkg-config --exists hyprland; then \
 		echo 'Hyprland headers found.'; \
 	else \
 		echo 'Hyprland headers not available. Run `make pluginenv` in the root Hyprland directory.'; \
