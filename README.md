@@ -21,6 +21,9 @@ hyprpm add https://github.com/Duckonaut/split-monitor-workspaces # Add the plugi
 hyprpm enable split-monitor-workspaces # Enable the plugin
 hyprpm reload # Reload the plugins
 ```
+Add the following in your `hyprland.conf` file:
+
+    exec-once = hyprpm reload -n
 
 ## Manual installation
 
