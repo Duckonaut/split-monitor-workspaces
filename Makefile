@@ -6,12 +6,16 @@ COMPILE_FLAGS=-g -fPIC --no-gnu-unique -std=c++23
 COMPILE_FLAGS+=`pkg-config --cflags pixman-1 libdrm`
 COMPILE_FLAGS+=-Iinclude
 
-ifeq ($(HYPRLAND_HEADERS),)
-COMPILE_FLAGS+=`pkg-config --cflags hyprland`
-else
+# use HYPRLAND_HEADERS environment variable to find Hyprland headers
+# usage: HYPRLAND_HEADERS=/path/to/hyprland-sources/ make all,
+#        where /path/to/hyprland-sources/ should include a directory 'hyprland' which contains the repository root.
+ifneq ($(HYPRLAND_HEADERS),)
 COMPILE_FLAGS+=-I"$(HYPRLAND_HEADERS)"
 COMPILE_FLAGS+=-I"$(HYPRLAND_HEADERS)/protocols/"
 endif
+# fallback to installed headers in case some headers are missing in HYPRLAND_HEADERS
+# this happens with the installed protocol headers
+COMPILE_FLAGS+=`pkg-config --cflags hyprland`
 
 COMPILE_DEFINES=-DWLR_USE_UNSTABLE
 
@@ -31,8 +35,8 @@ all: check_env $(PLUGIN_NAME).so
 check_env:
 	@if [ -n "$(HYPRLAND_HEADERS)" ]; then \
 		echo 'Using HYPRLAND_HEADERS enviroment variable to find Hyprland headers'; \
-		if [ ! -d "$(HYPRLAND_HEADERS)/protocols" ]; then \
-			echo 'Hyprland headers not found'; \
+		if [ ! -d "$(HYPRLAND_HEADERS)/hyprland/protocols" ]; then \
+			echo 'Hyprland headers not found. The hyprland sources should be in HYPRLAND_HEADERS/hyprland for this to work!'; \
 			exit 1; \
 		fi; \
 	elif pkg-config --exists hyprland; then \
