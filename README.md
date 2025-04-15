@@ -9,10 +9,6 @@ A small plugin to provide `awesome`/`dwm`-like behavior with workspaces: split t
 - Hyprland >= v0.38.1
 
 # Installing
-Since Hyprland plugins don't have ABI guarantees, you *should* download the Hyprland source and compile it if you plan to use plugins.
-This ensures the compiler version is the same between the Hyprland build you're running, and the plugins you are using.
-
-The guide on compiling and installing Hyprland manually is on the [wiki](http://wiki.hyprland.org/Getting-Started/Installation/#manual-manual-build)
 
 ## Using [hyprpm](https://wiki.hyprland.org/Plugins/Using-Plugins/#hyprpm)
 Hyprpm is a tool integrated with the latest Hyprland version, to use it first you'll need to add the repository and then enable the plugin
@@ -27,7 +23,12 @@ Add the following in your `hyprland.conf` file to automatically load the plugin 
 
 ## Manual installation
 
-1. Export the `HYPRLAND_HEADERS` variable to point to the root directory of the Hyprland repo
+Since Hyprland plugins don't have ABI guarantees, you *should* download the Hyprland source and compile it if you plan to install plugins manually.
+This ensures the compiler version is the same between the Hyprland build you're running, and the plugins you are using.
+
+The guide on compiling and installing Hyprland manually is on the [wiki](http://wiki.hyprland.org/Getting-Started/Installation/#manual-manual-build)
+
+1. Export the `HYPRLAND_HEADERS` variable to point to the root directory of the Hyprland repo, for example:
     - `export HYPRLAND_HEADERS="$HOME/repos/Hyprland"`
 2. Compile
     - `make all`
@@ -100,7 +101,7 @@ module will handle the rest.
 
 # Usage
 
-The plugin provides drop-in replacements for workspace-related commands
+The plugin provides drop-in replacements for workspace-related commands, to be able to easily specify the `n`th workspace on the focused monitor:
 
 | Normal                | Replacement                   |
 |-----------------------|-------------------------------|
@@ -108,13 +109,14 @@ The plugin provides drop-in replacements for workspace-related commands
 | movetoworkspace       | split-movetoworkspace         |
 | movetoworkspacesilent | split-movetoworkspacesilent   |
 
-And two new ones, to move windows between monitors
+And these new commands:
 
-| Normal                    | Arguments         |
-|---------------------------|-------------------|
-| split-cycleworkspaces     | next/prev/+1/-1    |
-| split-changemonitor       | next/prev/+1/-1    |
-| split-changemonitorsilent | next/prev/+1/-1    |
+| Normal                    | Arguments         | Description                                                                               |
+|---------------------------|-------------------|-------------------------------------------------------------------------------------------|
+| split-cycleworkspaces     | next/prev/+1/-1   | Cycle through workspaces on the current monitor                                           |
+| split-changemonitor       | next/prev/+1/-1   | Move a workspace to the next/previous monitor                                             |
+| split-changemonitorsilent | next/prev/+1/-1   | Move a workspace to the next/previous monitor without focus change                        |
+| split-grabroguewindows    |                   | After disconnecting a monitor, call this to move all rogue windows to the current monitor |
 
 It also provides the following config values
 | Name                                                            | Type      | Default   | Description                                           |

@@ -216,6 +216,40 @@ SDispatchResult splitChangeMonitor(const std::string& value)
     return changeMonitor(false, value);
 }
 
+SDispatchResult grabRogueWindows(const std::string& /*unused*/)
+{
+    // implementation loosely based on shezdy's hyprsplit: https://github.com/shezdy/hyprsplit
+    Debug::log(INFO, "[split-monitor-workspaces] Grabbing rogue windows");
+    const auto currentMonitor = getCurrentMonitor();
+    if (currentMonitor == nullptr) {
+        Debug::log(ERR, "[split-monitor-workspaces] No active monitor found");
+        return {.success = false, .error = "No active monitor found"};
+    }
+    const auto currentWorkspace = currentMonitor->activeWorkspace;
+    if (currentWorkspace == nullptr) {
+        Debug::log(ERR, "[split-monitor-workspaces] No active workspace found");
+        return {.success = false, .error = "No active workspace found"};
+    }
+
+    for (const auto& window : g_pCompositor->m_vWindows) {
+        // ignore unmapped and special windows
+        if (!window->m_bIsMapped && !window->onSpecialWorkspace())
+            continue;
+
+        auto const workspaceName = window->m_pWorkspace->m_szName;
+        auto const monitorID = window->m_pMonitor->ID;
+
+        bool isInRogueWorkspace = !g_vMonitorWorkspaceMap.contains(monitorID) || // if the monitor is not mapped, the window is rogue
+                                  !std::ranges::any_of(g_vMonitorWorkspaceMap[monitorID], [&workspaceName](const auto& mappedWorkspaceName) { return workspaceName == mappedWorkspaceName; });
+        if (isInRogueWorkspace) {
+            Debug::log(INFO, "[split-monitor-workspaces] Moving rogue window {} from workspace {} to workspace {}", window->m_szTitle.c_str(), workspaceName.c_str(),
+                       currentWorkspace->m_szName.c_str());
+            g_pCompositor->moveWindowToWorkspaceSafe(window, currentWorkspace);
+        }
+    }
+    return {.success = true, .error = ""};
+}
+
 void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-functions-to-static)
 {
     if (monitor->activeMonitorRule.disabled) {
@@ -228,7 +262,7 @@ void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-
         return;
     }
 
-    int workspaceIndex = monitor->ID * g_workspaceCount + 1;
+    int workspaceIndex = (monitor->ID * g_workspaceCount) + 1;
 
     Debug::log(INFO, "{}",
                "[split-monitor-workspaces] Mapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + g_workspaceCount - 1) + " to monitor " + monitor->szName);
@@ -262,7 +296,7 @@ void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-
 
 void unmapMonitor(const PHLMONITOR& monitor)
 {
-    int workspaceIndex = monitor->ID * g_workspaceCount + 1;
+    int workspaceIndex = (monitor->ID * g_workspaceCount) + 1;
 
     Debug::log(INFO, "{}",
                "[split-monitor-workspaces] Unmapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + g_workspaceCount - 1) + " from monitor " + monitor->szName);
@@ -367,6 +401,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-movetoworkspacesilent", splitMoveToWorkspaceSilent);
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-changemonitor", splitChangeMonitor);
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-changemonitorsilent", splitChangeMonitorSilent);
+    HyprlandAPI::addDispatcherV2(PHANDLE, "split-grabroguewindows", grabRogueWindows);
 
     // reload the config before adding the callback, so we can already use the config's values we defined above
     HyprlandAPI::reloadConfig();
