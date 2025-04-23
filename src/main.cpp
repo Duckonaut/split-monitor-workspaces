@@ -105,7 +105,7 @@ const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std:
 PHLMONITOR getCurrentMonitor()
 {
     // get last focused monitor, because some people switch monitors with a keybind while the cursor is on a different monitor
-    if (PHLMONITOR monitor = g_pCompositor->m_pLastMonitor.lock()) {
+    if (PHLMONITOR monitor = g_pCompositor->m_lastMonitor.lock()) {
         return monitor;
     }
     Debug::log(WARN, "[split-monitor-workspaces] Last monitor does not exist, falling back to cursor's monitor");
@@ -168,7 +168,7 @@ SDispatchResult changeMonitor(bool quiet, const std::string& value)
 
     PHLMONITOR nextMonitor = nullptr;
 
-    uint64_t monitorCount = g_pCompositor->m_vMonitors.size();
+    uint64_t monitorCount = g_pCompositor->m_monitors.size();
 
     int const delta = getDelta(value);
     if (delta == 0) {
@@ -179,8 +179,8 @@ SDispatchResult changeMonitor(bool quiet, const std::string& value)
     // The index is used instead of the monitorID because using the monitorID won't work if monitors are removed or mirrored
     // as there would be gaps in the monitorID sequence
     int currentMonitorIndex = -1;
-    for (size_t i = 0; i < g_pCompositor->m_vMonitors.size(); i++) {
-        if (g_pCompositor->m_vMonitors[i] == monitor) {
+    for (size_t i = 0; i < g_pCompositor->m_monitors.size(); i++) {
+        if (g_pCompositor->m_monitors[i] == monitor) {
             currentMonitorIndex = i;
             break;
         }
@@ -192,7 +192,7 @@ SDispatchResult changeMonitor(bool quiet, const std::string& value)
 
     int nextMonitorIndex = (monitorCount + currentMonitorIndex + delta) % monitorCount;
 
-    nextMonitor = g_pCompositor->m_vMonitors[nextMonitorIndex];
+    nextMonitor = g_pCompositor->m_monitors[nextMonitorIndex];
 
     int nextWorkspaceID = nextMonitor->activeWorkspace->m_iID;
 
@@ -231,7 +231,7 @@ SDispatchResult grabRogueWindows(const std::string& /*unused*/)
         return {.success = false, .error = "No active workspace found"};
     }
 
-    for (const auto& window : g_pCompositor->m_vWindows) {
+    for (const auto& window : g_pCompositor->m_windows) {
         // ignore unmapped and special windows
         if (!window->m_bIsMapped && !window->onSpecialWorkspace())
             continue;
@@ -332,7 +332,7 @@ void remapAllMonitors()
 {
     raiseNotification("[split-monitor-workspaces] Remapping workspaces...");
     unmapAllMonitors();
-    for (const PHLMONITOR& monitor : g_pCompositor->m_vMonitors) {
+    for (const PHLMONITOR& monitor : g_pCompositor->m_monitors) {
         mapMonitor(monitor);
     }
 }
