@@ -233,16 +233,16 @@ SDispatchResult grabRogueWindows(const std::string& /*unused*/)
 
     for (const auto& window : g_pCompositor->m_windows) {
         // ignore unmapped and special windows
-        if (!window->m_bIsMapped && !window->onSpecialWorkspace())
+        if (!window->m_isMapped && !window->onSpecialWorkspace())
             continue;
 
-        auto const workspaceName = window->m_pWorkspace->m_name;
-        auto const monitorID = window->m_pMonitor->ID;
+        auto const workspaceName = window->m_workspace->m_name;
+        auto const monitorID = window->m_monitor->ID;
 
         bool isInRogueWorkspace = !g_vMonitorWorkspaceMap.contains(monitorID) || // if the monitor is not mapped, the window is rogue
                                   !std::ranges::any_of(g_vMonitorWorkspaceMap[monitorID], [&workspaceName](const auto& mappedWorkspaceName) { return workspaceName == mappedWorkspaceName; });
         if (isInRogueWorkspace) {
-            Debug::log(INFO, "[split-monitor-workspaces] Moving rogue window {} from workspace {} to workspace {}", window->m_szTitle.c_str(), workspaceName.c_str(),
+            Debug::log(INFO, "[split-monitor-workspaces] Moving rogue window {} from workspace {} to workspace {}", window->m_title.c_str(), workspaceName.c_str(),
                        currentWorkspace->m_name.c_str());
             g_pCompositor->moveWindowToWorkspaceSafe(window, currentWorkspace);
         }
