@@ -186,8 +186,8 @@ SDispatchResult changeMonitor(bool quiet, const std::string& value)
         }
     }
     if (currentMonitorIndex == -1) {
-        Debug::log(WARN, "[split-monitor-workspaces] Monitor ID {} not found in monitor list?", monitor->ID);
-        return {.success = false, .error = "Monitor ID not found in monitor list: " + std::to_string(monitor->ID)};
+        Debug::log(WARN, "[split-monitor-workspaces] Monitor ID {} not found in monitor list?", monitor->m_id);
+        return {.success = false, .error = "Monitor ID not found in monitor list: " + std::to_string(monitor->m_id)};
     }
 
     int nextMonitorIndex = (monitorCount + currentMonitorIndex + delta) % monitorCount;
