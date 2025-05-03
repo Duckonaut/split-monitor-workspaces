@@ -19,7 +19,9 @@ hyprpm reload # Reload the plugins
 ```
 Add the following in your `hyprland.conf` file to automatically load the plugin at startup:
 
-    exec-once = hyprpm reload -n
+```
+exec-once = hyprpm reload -n
+```
 
 ## Manual installation
 
@@ -111,12 +113,13 @@ The plugin provides drop-in replacements for workspace-related commands, to be a
 
 And these new commands:
 
-| Normal                    | Arguments         | Description                                                                               |
-|---------------------------|-------------------|-------------------------------------------------------------------------------------------|
-| split-cycleworkspaces     | next/prev/+1/-1   | Cycle through workspaces on the current monitor                                           |
-| split-changemonitor       | next/prev/+1/-1   | Move a workspace to the next/previous monitor                                             |
-| split-changemonitorsilent | next/prev/+1/-1   | Move a workspace to the next/previous monitor without focus change                        |
-| split-grabroguewindows    |                   | After disconnecting a monitor, call this to move all rogue windows to the current monitor |
+| Normal                        | Arguments         | Description                                                                                     |
+|-------------------------------|-------------------|-------------------------------------------------------------------------------------------------|
+| split-cycleworkspaces         | next/prev/+1/-1   | Cycle through workspaces on the current monitor                                                 |
+| split-cycleworkspacesnowrap   | next/prev/+1/-1   | Cycle through workspaces on the current monitor. Doesn't wrap around to first or last workspace | 
+| split-changemonitor           | next/prev/+1/-1   | Move a workspace to the next/previous monitor                                                   |
+| split-changemonitorsilent     | next/prev/+1/-1   | Move a workspace to the next/previous monitor without focus change                              |
+| split-grabroguewindows        |                   | After disconnecting a monitor, call this to move all rogue windows to the current monitor       |
 
 It also provides the following config values
 | Name                                                            | Type      | Default   | Description                                           |
