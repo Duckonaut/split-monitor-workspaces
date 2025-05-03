@@ -119,7 +119,7 @@ SDispatchResult splitWorkspace(const std::string& workspace)
     return {.success = result == "ok", .error = result};
 }
 
-SDispatchResult splitCycleWorkspaces(const std::string& value)
+SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = false)
 {
     int const delta = getDelta(value);
     if (delta == 0) {
@@ -141,13 +141,31 @@ SDispatchResult splitCycleWorkspaces(const std::string& value)
     }
 
     index += delta;
-    if (index < 0)
-        index = g_workspaceCount - 1;
-    else if (index >= g_workspaceCount)
-        index = 0;
+    if (index < 0) {
+        if (nowrap) {
+            return {.success = true, .error = ""}; // null operation because wrapping is disabled
+        }
+        index = g_workspaceCount - 1; // wrap around to the last workspace
+    }
+    else if (index >= g_workspaceCount) {
+        if (nowrap) {
+            return {.success = true, .error = ""}; // null operation because wrapping is disabled
+        }
+        index = 0; // wrap around to the first workspace
+    }
 
     auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + workspaces[index]);
     return {.success = result == "ok", .error = result};
+}
+
+SDispatchResult splitCycleWorkspaces(const std::string& value)
+{
+    return cycleWorkspaces(value, false);
+}
+
+SDispatchResult splitCycleWorkspacesNowrap(const std::string& value)
+{
+    return cycleWorkspaces(value, true);
 }
 
 SDispatchResult splitMoveToWorkspace(const std::string& workspace)
@@ -396,6 +414,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-workspace", splitWorkspace);
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-cycleworkspaces", splitCycleWorkspaces);
+    HyprlandAPI::addDispatcherV2(PHANDLE, "split-cycleworkspacesnowrap", splitCycleWorkspacesNowrap);
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-movetoworkspace", splitMoveToWorkspace);
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-movetoworkspacesilent", splitMoveToWorkspaceSilent);
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-changemonitor", splitChangeMonitor);
