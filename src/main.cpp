@@ -42,11 +42,16 @@ void raiseNotification(const std::string& message, float timeout = 5000.0F)
 
 int getDelta(const std::string& direction)
 {
-    if (direction == "next" || direction == "+1" || direction == "1") {
+    if (direction == "next")
         return 1;
-    }
-    if (direction == "prev" || direction == "-1") {
+    if (direction == "prev")
         return -1;
+    try {
+        // this supports -x, +x and x
+        return std::stoi(direction);
+    }
+    catch (const std::invalid_argument&) {
+        Debug::log(WARN, "[split-monitor-workspaces] Invalid direction value: {}", direction.c_str());
     }
     // fallback if input is incorrect
     return 0;
@@ -65,41 +70,75 @@ int getParamValue(const char* paramName)
 
 const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std::string& workspace)
 {
-    // if the workspace is "empty", we expect the new ID to be the first available ID on the given monitor (not the first ID in the global list)
+    // based on the string, we parse multiple formats:
+    // #1 - "empty" -> get the first empty workspace on the monitor, or the last workspace if all have windows
+    // #2 - "+1", "-2" -> relative workspace ID, e.g. next or previous workspace
+    // #3 - "1", "2", "3" -> absolute workspace ID, e.g. workspace 1, 2 or 3 on the current monitor
+    // if these formats fail to be parsed form the workspace string, we assume the user wants to switch to a workspace by name and simply pass that to hyprland
+
+    auto const curWorkspacesIt = g_vMonitorWorkspaceMap.find(monitor->m_id);
+    if (curWorkspacesIt == g_vMonitorWorkspaceMap.end()) {
+        Debug::log(WARN, "[split-monitor-workspaces] Monitor ID {} not found in workspace map", monitor->m_id);
+        return workspace; // use the original string if the monitor is not mapped
+    }
+    const std::vector<std::string>& curWorkspaces = curWorkspacesIt->second;
+    if (curWorkspaces.empty()) {
+        Debug::log(WARN, "[split-monitor-workspaces] No workspaces mapped to monitor ID {}", monitor->m_id);
+        return workspace; // use the original string if no workspaces are mapped
+    }
+
+    // #1 if the workspace is "empty", we expect the new ID to be the first available ID on the given monitor (not the first ID in the global list)
     if (workspace == "empty") {
         // get the next workspace ID that is empty on this monitor
-        for (const auto& workspaceName : g_vMonitorWorkspaceMap[monitor->m_id]) {
+        for (const auto& workspaceName : curWorkspaces) {
             PHLWORKSPACE workspacePtr = g_pCompositor->getWorkspaceByName(workspaceName);
             // the workspace we want is either not yet created (=nullptr) or already created but empty (!= nullptr but no windows)
             if (workspacePtr == nullptr || workspacePtr->getWindows() == 0) {
                 return workspaceName;
             }
         }
-        // if not yet returned, we just return the last workspace in the map
-        return g_vMonitorWorkspaceMap[monitor->m_id].back();
+        // if no empty monitor, we just go to the last workspace in the map
+        return curWorkspaces.back();
     }
 
-    // otherwise, try to parse the workspace as an integer
     int workspaceIndex = 0;
-    try {
-        // convert to 0-indexed int
-        workspaceIndex = std::stoi(workspace) - 1;
+    if (workspace.starts_with("+") || workspace.starts_with("-")) {
+        // #2 relative IDS, e.g. +1, -2
+        auto delta = getDelta(workspace);
+        if (delta == 0) {
+            Debug::log(ERR, "[split-monitor-workspaces] Invalid workspace delta: {}", workspace.c_str());
+            return workspace;
+        }
+        // find the current workspace index in the monitor's workspace list
+        auto it = std::ranges::find(curWorkspaces, monitor->m_activeWorkspace->m_name);
+        if (it == curWorkspaces.end()) {
+            Debug::log(ERR, "[split-monitor-workspaces] Current workspace {} not found in monitor workspaces", monitor->m_activeWorkspace->m_name.c_str());
+            return workspace;
+        }
+        workspaceIndex = std::distance(curWorkspaces.begin(), it) + delta;
     }
-    catch (std::invalid_argument&) {
-        // if parsing fails, assume the user wants to switch to the workspace by name
-        Debug::log(WARN, "[split-monitor-workspaces] Invalid workspace index: {}, assuming named workspace", workspace.c_str());
-        return workspace;
+    else {
+        // #3 absolute IDs, e.g. 1, 2, 3
+        try {
+            // convert to 0-indexed int
+            workspaceIndex = std::stoi(workspace) - 1;
+        }
+        catch (std::invalid_argument&) {
+            // if parsing fails, assume the user wants to switch to the workspace by name
+            Debug::log(WARN, "[split-monitor-workspaces] Invalid workspace index: {}, assuming named workspace", workspace.c_str());
+            return workspace;
+        }
     }
 
     if (workspaceIndex < 0) {
-        return workspace;
+        return curWorkspaces.front();
     }
 
-    if ((size_t)workspaceIndex >= g_vMonitorWorkspaceMap[monitor->m_id].size()) {
-        return workspace;
+    if ((size_t)workspaceIndex >= curWorkspaces.size()) {
+        return curWorkspaces.back();
     }
 
-    return g_vMonitorWorkspaceMap[monitor->m_id][workspaceIndex];
+    return curWorkspaces[workspaceIndex];
 }
 
 PHLMONITOR getCurrentMonitor()

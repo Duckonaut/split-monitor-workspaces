@@ -111,15 +111,17 @@ The plugin provides drop-in replacements for workspace-related commands, to be a
 | movetoworkspace       | split-movetoworkspace         |
 | movetoworkspacesilent | split-movetoworkspacesilent   |
 
+These replacement commands also support passing `+x`/`-x` (`x: int`) to specify a workspace relative to the currently focused one, with the extra feature that they will stop at the first or last workspace on the monitor, so if you specify +100, but you only have 10 workspaces, it will just go to the last workspace (10).
+
 And these new commands:
 
-| Normal                        | Arguments         | Description                                                                                     |
-|-------------------------------|-------------------|-------------------------------------------------------------------------------------------------|
-| split-cycleworkspaces         | next/prev/+1/-1   | Cycle through workspaces on the current monitor                                                 |
-| split-cycleworkspacesnowrap   | next/prev/+1/-1   | Cycle through workspaces on the current monitor. Doesn't wrap around to first or last workspace | 
-| split-changemonitor           | next/prev/+1/-1   | Move a workspace to the next/previous monitor                                                   |
-| split-changemonitorsilent     | next/prev/+1/-1   | Move a workspace to the next/previous monitor without focus change                              |
-| split-grabroguewindows        |                   | After disconnecting a monitor, call this to move all rogue windows to the current monitor       |
+| Normal                        | Arguments         | Description                                                                                              |
+|-------------------------------|-------------------|----------------------------------------------------------------------------------------------------------|
+| split-cycleworkspaces         | `next/prev/+x/-x` | (x: int) Cycle through workspaces on the current monitor                                                 |
+| split-cycleworkspacesnowrap   | `next/prev/+x/-x` | (x: int) Cycle through workspaces on the current monitor. Doesn't wrap around to first or last workspace | 
+| split-changemonitor           | `next/prev/+x/-x` | (x: int) Move a workspace to the next/previous monitor                                                   |
+| split-changemonitorsilent     | `next/prev/+x/-x` | (x: int) Move a workspace to the next/previous monitor without focus change                              |
+| split-grabroguewindows        |                   | After disconnecting a monitor, call this to move all rogue windows to the current monitor                |
 
 It also provides the following config values
 | Name                                                            | Type      | Default   | Description                                           |
