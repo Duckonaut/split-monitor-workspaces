@@ -18,29 +18,29 @@ auto constexpr k_keepFocused = "plugin:split-monitor-workspaces:keep_focused";
 auto constexpr k_enableNotifications = "plugin:split-monitor-workspaces:enable_notifications";
 auto constexpr k_enablePersistentWorkspaces = "plugin:split-monitor-workspaces:enable_persistent_workspaces";
 
-const CHyprColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
-bool g_enableNotifications = false;
-bool g_enablePersistentWorkspaces = true;
-bool g_keepFocused = false;
-int g_workspaceCount;
+static const CHyprColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
+static bool g_enableNotifications = false;
+static bool g_enablePersistentWorkspaces = true;
+static bool g_keepFocused = false;
+static int g_workspaceCount;
 
 // the first time we load the plugin, we want to switch to the first workspace on the first monitor regardless of keepFocused
-bool g_firstLoad = true;
+static bool g_firstLoad = true;
 
-std::map<uint64_t, std::vector<std::string>> g_vMonitorWorkspaceMap;
+static std::map<uint64_t, std::vector<std::string>> g_vMonitorWorkspaceMap;
 
 static SP<HOOK_CALLBACK_FN> e_monitorAddedHandle = nullptr;
 static SP<HOOK_CALLBACK_FN> e_monitorRemovedHandle = nullptr;
 static SP<HOOK_CALLBACK_FN> e_configReloadedHandle = nullptr;
 
-void raiseNotification(const std::string& message, float timeout = 5000.0F)
+static void raiseNotification(const std::string& message, float timeout = 5000.0F)
 {
     if (g_enableNotifications) {
         HyprlandAPI::addNotification(PHANDLE, message, s_pluginColor, timeout);
     }
 }
 
-int getDelta(const std::string& direction)
+static int getDelta(const std::string& direction)
 {
     if (direction == "next")
         return 1;
@@ -57,7 +57,7 @@ int getDelta(const std::string& direction)
     return 0;
 }
 
-int getParamValue(const char* paramName)
+static int getParamValue(const char* paramName)
 {
     Debug::log(INFO, "[split-monitor-workspaces] Getting config value {}", paramName);
     const auto* const paramPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, paramName)->getDataStaticPtr();
@@ -68,7 +68,7 @@ int getParamValue(const char* paramName)
     return **paramPtr;
 }
 
-const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std::string& workspace)
+static const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std::string& workspace)
 {
     // based on the string, we parse multiple formats:
     // #1 - "empty" -> get the first empty workspace on the monitor, or the last workspace if all have windows
@@ -141,7 +141,7 @@ const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std:
     return curWorkspaces[workspaceIndex];
 }
 
-PHLMONITOR getCurrentMonitor()
+static PHLMONITOR getCurrentMonitor()
 {
     // get last focused monitor, because some people switch monitors with a keybind while the cursor is on a different monitor
     if (PHLMONITOR monitor = g_pCompositor->m_lastMonitor.lock()) {
@@ -152,13 +152,13 @@ PHLMONITOR getCurrentMonitor()
     return g_pCompositor->getMonitorFromCursor();
 }
 
-SDispatchResult splitWorkspace(const std::string& workspace)
+static SDispatchResult splitWorkspace(const std::string& workspace)
 {
     auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
     return {.success = result == "ok", .error = result};
 }
 
-SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = false)
+static SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = false)
 {
     int const delta = getDelta(value);
     if (delta == 0) {
@@ -197,29 +197,29 @@ SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = false)
     return {.success = result == "ok", .error = result};
 }
 
-SDispatchResult splitCycleWorkspaces(const std::string& value)
+static SDispatchResult splitCycleWorkspaces(const std::string& value)
 {
     return cycleWorkspaces(value, false);
 }
 
-SDispatchResult splitCycleWorkspacesNowrap(const std::string& value)
+static SDispatchResult splitCycleWorkspacesNowrap(const std::string& value)
 {
     return cycleWorkspaces(value, true);
 }
 
-SDispatchResult splitMoveToWorkspace(const std::string& workspace)
+static SDispatchResult splitMoveToWorkspace(const std::string& workspace)
 {
     auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
     return {.success = result == "ok", .error = result};
 }
 
-SDispatchResult splitMoveToWorkspaceSilent(const std::string& workspace)
+static SDispatchResult splitMoveToWorkspaceSilent(const std::string& workspace)
 {
     auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
     return {.success = result == "ok", .error = result};
 }
 
-SDispatchResult changeMonitor(bool quiet, const std::string& value)
+static SDispatchResult changeMonitor(bool quiet, const std::string& value)
 {
     PHLMONITOR monitor = getCurrentMonitor();
 
@@ -263,17 +263,17 @@ SDispatchResult changeMonitor(bool quiet, const std::string& value)
     return {.success = result == "ok", .error = result};
 }
 
-SDispatchResult splitChangeMonitorSilent(const std::string& value)
+static SDispatchResult splitChangeMonitorSilent(const std::string& value)
 {
     return changeMonitor(true, value);
 }
 
-SDispatchResult splitChangeMonitor(const std::string& value)
+static SDispatchResult splitChangeMonitor(const std::string& value)
 {
     return changeMonitor(false, value);
 }
 
-SDispatchResult grabRogueWindows(const std::string& /*unused*/)
+static SDispatchResult grabRogueWindows(const std::string& /*unused*/)
 {
     // implementation loosely based on shezdy's hyprsplit: https://github.com/shezdy/hyprsplit
     Debug::log(INFO, "[split-monitor-workspaces] Grabbing rogue windows");
@@ -306,7 +306,7 @@ SDispatchResult grabRogueWindows(const std::string& /*unused*/)
     return {.success = true, .error = ""};
 }
 
-void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-functions-to-static)
+static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-functions-to-static)
 {
     if (monitor->m_activeMonitorRule.disabled) {
         Debug::log(INFO, "[split-monitor-workspaces] Skipping disabled monitor {}", monitor->m_name);
@@ -350,7 +350,7 @@ void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-
     }
 }
 
-void unmapMonitor(const PHLMONITOR& monitor)
+static void unmapMonitor(const PHLMONITOR& monitor)
 {
     int workspaceIndex = (monitor->m_id * g_workspaceCount) + 1;
 
@@ -369,7 +369,7 @@ void unmapMonitor(const PHLMONITOR& monitor)
     }
 }
 
-void unmapAllMonitors()
+static void unmapAllMonitors()
 {
     while (!g_vMonitorWorkspaceMap.empty()) {
         auto [monitorID, workspaces] = *g_vMonitorWorkspaceMap.begin();
@@ -384,7 +384,7 @@ void unmapAllMonitors()
     g_vMonitorWorkspaceMap.clear();
 }
 
-void remapAllMonitors()
+static void remapAllMonitors()
 {
     raiseNotification("[split-monitor-workspaces] Remapping workspaces...");
     unmapAllMonitors();
@@ -393,7 +393,7 @@ void remapAllMonitors()
     }
 }
 
-void loadConfigValues()
+static void loadConfigValues()
 {
     g_enableNotifications = getParamValue(k_enableNotifications) != 0;
     g_enablePersistentWorkspaces = getParamValue(k_enablePersistentWorkspaces) != 0;
@@ -401,14 +401,14 @@ void loadConfigValues()
     g_workspaceCount = getParamValue(k_workspaceCount);
 }
 
-void reload()
+static void reload()
 {
     loadConfigValues();
     remapAllMonitors();
     g_firstLoad = false;
 }
 
-void monitorAddedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param)
+static void monitorAddedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param)
 { // NOLINT(performance-unnecessary-value-param)
     auto monitor = std::any_cast<PHLMONITOR>(param);
     if (monitor == nullptr) {
@@ -418,7 +418,7 @@ void monitorAddedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any 
     mapMonitor(monitor);
 }
 
-void monitorRemovedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param) // NOLINT(performance-unnecessary-value-param)
+static void monitorRemovedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param) // NOLINT(performance-unnecessary-value-param)
 {
     auto monitor = std::any_cast<PHLMONITOR>(param);
     if (monitor == nullptr) {
@@ -428,7 +428,7 @@ void monitorRemovedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::an
     unmapMonitor(monitor);
 }
 
-void configReloadedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/) // NOLINT(performance-unnecessary-value-param)
+static void configReloadedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/) // NOLINT(performance-unnecessary-value-param)
 {
     // anything you call in this function should not reload the config, as it will cause an infinite loop
     Debug::log(INFO, "[split-monitor-workspaces] Config reloaded");
