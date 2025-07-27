@@ -338,7 +338,7 @@ static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-
             Debug::log(INFO, "[split-monitor-workspaces] Moving workspace {} to monitor {}", workspaceName, monitor->m_name);
             g_pCompositor->moveWorkspaceToMonitor(workspace, monitor);
             if (g_enablePersistentWorkspaces) {
-                workspace->m_persistent = true;
+                workspace->setPersistent(true);
             }
         }
     }
@@ -362,7 +362,7 @@ static void unmapMonitor(const PHLMONITOR& monitor)
             PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
 
             if (workspace.get() != nullptr) {
-                workspace->m_persistent = false;
+                workspace->setPersistent(false);
             }
         }
         g_vMonitorWorkspaceMap.erase(monitor->m_id);
