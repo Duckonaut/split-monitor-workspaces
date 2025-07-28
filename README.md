@@ -111,14 +111,16 @@ The plugin provides drop-in replacements for workspace-related commands, to be a
 | movetoworkspace       | split-movetoworkspace         |
 | movetoworkspacesilent | split-movetoworkspacesilent   |
 
-These replacement commands also support passing `+x`/`-x` (`x: int`) to specify a workspace relative to the currently focused one, with the extra feature that they will stop at the first or last workspace on the monitor, so if you specify +100, but you only have 10 workspaces, it will just go to the last workspace (10).
+These replacement commands also support passing `+x`/`-x` (`x: int`) to specify a workspace relative to the currently focused one, with the extra feature that they will wrap around. so when you get to the end and use `+1`, it will go to the first workspace. When you're at the first workspace and use `-1`, it will go to the last workspace.
+
+If you set `enable_wrapping = false` in the plugin config, it will not wrap around and will just stop at the first or last workspace. So in this case if you specify +100, but you only have 10 workspaces, it will just go to the last workspace (10).
 
 And these new commands:
 
 | Normal                        | Arguments         | Description                                                                                              |
 |-------------------------------|-------------------|----------------------------------------------------------------------------------------------------------|
 | split-cycleworkspaces         | `next/prev/+x/-x` | (x: int) Cycle through workspaces on the current monitor                                                 |
-| split-cycleworkspacesnowrap   | `next/prev/+x/-x` | (x: int) Cycle through workspaces on the current monitor. Doesn't wrap around to first or last workspace | 
+| split-cycleworkspacesnowrap   | `next/prev/+x/-x` | (x: int) Cycle through workspaces on the current monitor. Doesn't wrap around to first or last workspace (deprecated: set `enable_wrapping = false` in the plugin config instead) | 
 | split-changemonitor           | `next/prev/+x/-x` | (x: int) Move a workspace to the next/previous monitor                                                   |
 | split-changemonitorsilent     | `next/prev/+x/-x` | (x: int) Move a workspace to the next/previous monitor without focus change                              |
 | split-grabroguewindows        |                   | After disconnecting a monitor, call this to move all rogue windows to the current monitor                |
@@ -130,6 +132,7 @@ It also provides the following config values
 | `plugin:split-monitor-workspaces:keep_focused`                  | boolean   | 0         | Keep current workspaces focused on plugin init/reload |
 | `plugin:split-monitor-workspaces:enable_notifications`          | boolean   | 0         | Enable notifications                                  |
 | `plugin:split-monitor-workspaces:enable_persistent_workspaces`  | boolean   | 1         | Enable management of persistent workspaces. This means the plugin will at initialization create `$count` workspaces on each monitor and make them persistent. |
+| `plugin:split-monitor-workspaces:enable_wrapping`               | boolean   | 1         | Enable wrapping around workspaces when cycling through them or moving windows to the prev/next workspace. 
 
 This plugin supports [waybar's](https://github.com/Alexays/Waybar) `hyprland/workspaces` module. You can configure it like this:
 
