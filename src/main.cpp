@@ -17,12 +17,15 @@ auto constexpr k_workspaceCount = "plugin:split-monitor-workspaces:count";
 auto constexpr k_keepFocused = "plugin:split-monitor-workspaces:keep_focused";
 auto constexpr k_enableNotifications = "plugin:split-monitor-workspaces:enable_notifications";
 auto constexpr k_enablePersistentWorkspaces = "plugin:split-monitor-workspaces:enable_persistent_workspaces";
+auto constexpr k_enableWrapping = "plugin:split-monitor-workspaces:enable_wrapping";
 
 static const CHyprColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
+
+static int g_workspaceCount;
+static bool g_keepFocused = false;
 static bool g_enableNotifications = false;
 static bool g_enablePersistentWorkspaces = true;
-static bool g_keepFocused = false;
-static int g_workspaceCount;
+static bool g_enableWrapping = true;
 
 // the first time we load the plugin, we want to switch to the first workspace on the first monitor regardless of keepFocused
 static bool g_firstLoad = true;
@@ -131,11 +134,17 @@ static const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, con
     }
 
     if (workspaceIndex < 0) {
-        return curWorkspaces.front();
+        if (g_enableWrapping) {
+            return curWorkspaces.back(); // wrap around to the last workspace
+        }
+        return curWorkspaces.front(); // stop at the first workspace
     }
 
     if ((size_t)workspaceIndex >= curWorkspaces.size()) {
-        return curWorkspaces.back();
+        if (g_enableWrapping) {
+            return curWorkspaces.front(); // wrap around to the first workspace
+        }
+        return curWorkspaces.back(); // stop at the last workspace
     }
 
     return curWorkspaces[workspaceIndex];
@@ -199,11 +208,13 @@ static SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = f
 
 static SDispatchResult splitCycleWorkspaces(const std::string& value)
 {
-    return cycleWorkspaces(value, false);
+    return cycleWorkspaces(value, !g_enableWrapping);
 }
 
 static SDispatchResult splitCycleWorkspacesNowrap(const std::string& value)
 {
+    Debug::log(WARN, "[split-monitor-workspaces] split-cycleworkspacesnowrap is deprecated. Set the `enable_wrapping` config value to false instead.");
+    raiseNotification("[split-monitor-workspaces] split-cycleworkspacesnowrap is deprecated. Set the `enable_wrapping` config value to false instead.");
     return cycleWorkspaces(value, true);
 }
 
@@ -399,6 +410,7 @@ static void loadConfigValues()
     g_enablePersistentWorkspaces = getParamValue(k_enablePersistentWorkspaces) != 0;
     g_keepFocused = getParamValue(k_keepFocused) != 0;
     g_workspaceCount = getParamValue(k_workspaceCount);
+    g_enableWrapping = getParamValue(k_enableWrapping) != 0;
 }
 
 static void reload()
@@ -450,6 +462,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addConfigValue(PHANDLE, k_keepFocused, Hyprlang::INT{0});
     HyprlandAPI::addConfigValue(PHANDLE, k_enableNotifications, Hyprlang::INT{0});
     HyprlandAPI::addConfigValue(PHANDLE, k_enablePersistentWorkspaces, Hyprlang::INT{1});
+    HyprlandAPI::addConfigValue(PHANDLE, k_enableWrapping, Hyprlang::INT{1});
 
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-workspace", splitWorkspace);
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-cycleworkspaces", splitCycleWorkspaces);
