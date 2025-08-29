@@ -31,6 +31,7 @@ static bool g_enableWrapping = true;
 static bool g_firstLoad = true;
 
 static std::map<uint64_t, std::vector<std::string>> g_vMonitorWorkspaceMap;
+static std::vector<PHLWORKSPACE> g_vPersistentWorkspaces;
 
 static SP<HOOK_CALLBACK_FN> e_monitorAddedHandle = nullptr;
 static SP<HOOK_CALLBACK_FN> e_monitorRemovedHandle = nullptr;
@@ -350,6 +351,7 @@ static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-
             g_pCompositor->moveWorkspaceToMonitor(workspace, monitor);
             if (g_enablePersistentWorkspaces) {
                 workspace->setPersistent(true);
+                g_vPersistentWorkspaces.push_back(workspace); // keep a reference to avoid it being destructed (see https://github.com/hyprwm/Hyprland/discussions/11400#discussioncomment-14085672)
             }
         }
     }
@@ -374,6 +376,8 @@ static void unmapMonitor(const PHLMONITOR& monitor)
 
             if (workspace.get() != nullptr) {
                 workspace->setPersistent(false);
+                // remove this workspace shared ptr from the persistent workspaces vector, so it can be destructed if no other references exist
+                std::erase(g_vPersistentWorkspaces, workspace);
             }
         }
         g_vMonitorWorkspaceMap.erase(monitor->m_id);
@@ -393,6 +397,7 @@ static void unmapAllMonitors()
         }
     }
     g_vMonitorWorkspaceMap.clear();
+    g_vPersistentWorkspaces.clear();
 }
 
 static void remapAllMonitors()
