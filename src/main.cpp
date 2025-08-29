@@ -397,6 +397,7 @@ static void unmapAllMonitors()
         }
     }
     g_vMonitorWorkspaceMap.clear();
+    g_vPersistentWorkspaces.clear();
 }
 
 static void remapAllMonitors()
