@@ -231,9 +231,9 @@ static SDispatchResult splitMoveToWorkspaceSilent(const std::string& workspace)
     return {.success = result == "ok", .error = result};
 }
 
-// Helper function to check if two coordinates are "sticking" together
+// Helper function to check if two coordinates are "close" to each other
 // (within a small tolerance of 2 pixels)
-inline bool STICKS(double a, double b) {
+inline bool areCoordinatesClose(double a, double b) {
     return std::abs(a - b) < 2;
 }
 
@@ -269,25 +269,25 @@ static PHLMONITOR getMonitorInDirection(PHLMONITOR pSourceMonitor, const char& d
 
         switch (realDir) {
             case 'l':
-                if (STICKS(POSA.x, POSB.x + SIZEB.x)) {
+                if (areCoordinatesClose(POSA.x, POSB.x + SIZEB.x)) {
                     intersectLen = std::max(0.0, std::min(POSA.y + SIZEA.y, POSB.y + SIZEB.y) - std::max(POSA.y, POSB.y));
                     Debug::log(INFO, "[split-monitor-workspaces] Monitor '{}' is to the left, intersectLen={}", m->m_name, intersectLen);
                 }
                 break;
             case 'r':
-                if (STICKS(POSA.x + SIZEA.x, POSB.x)) {
+                if (areCoordinatesClose(POSA.x + SIZEA.x, POSB.x)) {
                     intersectLen = std::max(0.0, std::min(POSA.y + SIZEA.y, POSB.y + SIZEB.y) - std::max(POSA.y, POSB.y));
                     Debug::log(INFO, "[split-monitor-workspaces] Monitor '{}' is to the right, intersectLen={}", m->m_name, intersectLen);
                 }
                 break;
             case 't': // top
-                if (STICKS(POSA.y, POSB.y + SIZEB.y)) {
+                if (areCoordinatesClose(POSA.y, POSB.y + SIZEB.y)) {
                     intersectLen = std::max(0.0, std::min(POSA.x + SIZEA.x, POSB.x + SIZEB.x) - std::max(POSA.x, POSB.x));
                     Debug::log(INFO, "[split-monitor-workspaces] Monitor '{}' is to the top, intersectLen={}", m->m_name, intersectLen);
                 }
                 break;
             case 'b': // bottom
-                if (STICKS(POSA.y + SIZEA.y, POSB.y)) {
+                if (areCoordinatesClose(POSA.y + SIZEA.y, POSB.y)) {
                     intersectLen = std::max(0.0, std::min(POSA.x + SIZEA.x, POSB.x + SIZEB.x) - std::max(POSA.x, POSB.x));
                     Debug::log(INFO, "[split-monitor-workspaces] Monitor '{}' is to the bottom, intersectLen={}", m->m_name, intersectLen);
                 }
