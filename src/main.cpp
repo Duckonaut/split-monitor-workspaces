@@ -239,11 +239,15 @@ inline bool STICKS(double a, double b) {
 
 // Finds the best neighboring monitor in a given geometric direction.
 static PHLMONITOR getMonitorInDirection(PHLMONITOR pSourceMonitor, const char& dir) {
-    if (!pSourceMonitor)
+    if (!pSourceMonitor) {
+        Debug::log(WARN, "[split-monitor-workspaces] getMonitorInDirection called with null source monitor");
         return nullptr;
+    }
+    Debug::log(INFO, "[split-monitor-workspaces] getMonitorInDirection: source='{}', dir='{}'", pSourceMonitor->m_name, dir);
 
     const auto POSA = pSourceMonitor->m_position;
     const auto SIZEA = pSourceMonitor->m_size;
+    Debug::log(INFO, "[split-monitor-workspaces] Source monitor {}: pos=({}, {}), size=({}, {})", pSourceMonitor->m_name, POSA.x, POSA.y, SIZEA.x, SIZEA.y);
 
     double longestIntersect = -1;
     PHLMONITOR longestIntersectMonitor = nullptr;
@@ -252,8 +256,10 @@ static PHLMONITOR getMonitorInDirection(PHLMONITOR pSourceMonitor, const char& d
         if (m == pSourceMonitor || m->isMirror())
             continue;
 
+        Debug::log(INFO, "[split-monitor-workspaces] Checking monitor '{}'", m->m_name);
         const auto POSB = m->m_position;
         const auto SIZEB = m->m_size;
+        Debug::log(INFO, "[split-monitor-workspaces] Target monitor {}: pos=({}, {}), size=({}, {})", m->m_name, POSB.x, POSB.y, SIZEB.x, SIZEB.y);
         double intersectLen = -1;
         
         // Aliases for up/down
@@ -265,58 +271,81 @@ static PHLMONITOR getMonitorInDirection(PHLMONITOR pSourceMonitor, const char& d
             case 'l':
                 if (STICKS(POSA.x, POSB.x + SIZEB.x)) {
                     intersectLen = std::max(0.0, std::min(POSA.y + SIZEA.y, POSB.y + SIZEB.y) - std::max(POSA.y, POSB.y));
+                    Debug::log(INFO, "[split-monitor-workspaces] Monitor '{}' is to the left, intersectLen={}", m->m_name, intersectLen);
                 }
                 break;
             case 'r':
                 if (STICKS(POSA.x + SIZEA.x, POSB.x)) {
                     intersectLen = std::max(0.0, std::min(POSA.y + SIZEA.y, POSB.y + SIZEB.y) - std::max(POSA.y, POSB.y));
+                    Debug::log(INFO, "[split-monitor-workspaces] Monitor '{}' is to the right, intersectLen={}", m->m_name, intersectLen);
                 }
                 break;
             case 't': // top
                 if (STICKS(POSA.y, POSB.y + SIZEB.y)) {
                     intersectLen = std::max(0.0, std::min(POSA.x + SIZEA.x, POSB.x + SIZEB.x) - std::max(POSA.x, POSB.x));
+                    Debug::log(INFO, "[split-monitor-workspaces] Monitor '{}' is to the top, intersectLen={}", m->m_name, intersectLen);
                 }
                 break;
             case 'b': // bottom
                 if (STICKS(POSA.y + SIZEA.y, POSB.y)) {
                     intersectLen = std::max(0.0, std::min(POSA.x + SIZEA.x, POSB.x + SIZEB.x) - std::max(POSA.x, POSB.x));
+                    Debug::log(INFO, "[split-monitor-workspaces] Monitor '{}' is to the bottom, intersectLen={}", m->m_name, intersectLen);
                 }
                 break;
         }
 
         // The best match is the one with the longest shared edge.
         if (intersectLen > longestIntersect) {
+            Debug::log(INFO, "[split-monitor-workspaces] New best match: '{}' ({} > {})", m->m_name, intersectLen, longestIntersect);
             longestIntersect = intersectLen;
             longestIntersectMonitor = m;
         }
+    }
+
+    if (longestIntersectMonitor) {
+        Debug::log(INFO, "[split-monitor-workspaces] Found best match: '{}'", longestIntersectMonitor->m_name);
+    } else {
+        Debug::log(WARN, "[split-monitor-workspaces] No matching monitor found in direction '{}'", dir);
     }
 
     return longestIntersectMonitor;
 }
 
 static SDispatchResult changeMonitor(bool quiet, const std::string& value) {
+    Debug::log(INFO, "[split-monitor-workspaces] changeMonitor called with quiet={}, value='{}'", quiet, value.c_str());
     PHLMONITOR monitor = getCurrentMonitor();
     if (!monitor) {
         Debug::log(WARN, "[split-monitor-workspaces] Could not get current monitor.");
         return {.success = false, .error = "Could not get current monitor"};
     }
+    Debug::log(INFO, "[split-monitor-workspaces] Current monitor: {}", monitor->m_name);
     
     PHLMONITOR nextMonitor = nullptr;
 
     // First, try to handle geometric directions (l, r, u, d, t, b)
     if (value.length() == 1 && std::string("lrudtb").find(value[0]) != std::string::npos) {
+        Debug::log(INFO, "[split-monitor-workspaces] Attempting geometric monitor search with direction '{}'", value[0]);
         nextMonitor = getMonitorInDirection(monitor, value[0]);
+        if (nextMonitor) {
+            Debug::log(INFO, "[split-monitor-workspaces] Found geometric monitor: {}", nextMonitor->m_name);
+        } else {
+            Debug::log(WARN, "[split-monitor-workspaces] No geometric monitor found, falling back to index-based cycling.");
+        }
     }
 
     // If it's not a geometric direction or no geometric monitor was found, fall back to index-based cycling
     if (!nextMonitor) {
+        Debug::log(INFO, "[split-monitor-workspaces] Using index-based monitor cycling.");
         // This part is the original logic, used as a fallback.
         long int monitorCount = g_pCompositor->m_monitors.size();
+        Debug::log(INFO, "[split-monitor-workspaces] Total monitors: {}", monitorCount);
         if (monitorCount <= 1) {
+            Debug::log(INFO, "[split-monitor-workspaces] Not enough monitors to cycle.");
             return {.success = true, .error = ""}; // Nothing to do
         }
 
         int const delta = getDelta(value);
+        Debug::log(INFO, "[split-monitor-workspaces] Cycling with delta: {}", delta);
         if (delta == 0 && value != "0") { // getDelta returns 0 for invalid args and for "0"
              Debug::log(WARN, "[split-monitor-workspaces] Invalid monitor value: {}", value.c_str());
              return {.success = false, .error = "Invalid monitor value: " + value};
@@ -333,16 +362,26 @@ static SDispatchResult changeMonitor(bool quiet, const std::string& value) {
             Debug::log(WARN, "[split-monitor-workspaces] Monitor ID {} not found in monitor list?", monitor->m_id);
             return {.success = false, .error = "Monitor ID not found in monitor list: " + std::to_string(monitor->m_id)};
         }
+        Debug::log(INFO, "[split-monitor-workspaces] Current monitor index: {}", currentMonitorIndex);
 
         // Correctly calculate the next index with wrapping for both positive and negative deltas
         long int nextMonitorIndex = (currentMonitorIndex + delta % monitorCount + monitorCount) % monitorCount;
+        Debug::log(INFO, "[split-monitor-workspaces] Next monitor index: {}", nextMonitorIndex);
 
         nextMonitor = g_pCompositor->m_monitors[nextMonitorIndex];
+        Debug::log(INFO, "[split-monitor-workspaces] Next monitor is: {}", nextMonitor->m_name);
+    }
+
+    if (!nextMonitor) {
+        Debug::log(ERR, "[split-monitor-workspaces] Failed to determine next monitor.");
+        return {.success = false, .error = "Failed to determine next monitor."};
     }
 
     // Final dispatch logic
     int nextWorkspaceID = nextMonitor->m_activeWorkspace->m_id;
     std::string command = quiet ? "movetoworkspacesilent " : "movetoworkspace ";
+    Debug::log(INFO, "[split-monitor-workspaces] Next workspace ID: {}", nextWorkspaceID);
+    Debug::log(INFO, "[split-monitor-workspaces] Dispatching command: '{}'", command + std::to_string(nextWorkspaceID));
 
     auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", command + std::to_string(nextWorkspaceID));
     return {.success = result == "ok", .error = result};
