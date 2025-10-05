@@ -8,6 +8,7 @@
 #include <hyprutils/memory/SharedPtr.hpp>
 
 #include "globals.hpp"
+#include "util.hpp"
 
 #include <map>
 #include <unistd.h>
@@ -30,7 +31,7 @@ static bool g_enableWrapping = true;
 // the first time we load the plugin, we want to switch to the first workspace on the first monitor regardless of keepFocused
 static bool g_firstLoad = true;
 
-static std::map<uint64_t, std::vector<std::string>> g_vMonitorWorkspaceMap;
+static std::map<std::string, std::vector<std::string>> g_vMonitorWorkspaceMap;
 static std::vector<PHLWORKSPACE> g_vPersistentWorkspaces;
 
 static SP<HOOK_CALLBACK_FN> e_monitorAddedHandle = nullptr;
@@ -80,14 +81,14 @@ static const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, con
     // #3 - "1", "2", "3" -> absolute workspace ID, e.g. workspace 1, 2 or 3 on the current monitor
     // if these formats fail to be parsed form the workspace string, we assume the user wants to switch to a workspace by name and simply pass that to hyprland
 
-    auto const curWorkspacesIt = g_vMonitorWorkspaceMap.find(monitor->m_id);
+    auto const curWorkspacesIt = g_vMonitorWorkspaceMap.find(getMonitorIdentifier(monitor));
     if (curWorkspacesIt == g_vMonitorWorkspaceMap.end()) {
-        Debug::log(WARN, "[split-monitor-workspaces] Monitor ID {} not found in workspace map", monitor->m_id);
+        Debug::log(WARN, "[split-monitor-workspaces] Monitor ID {} not found in workspace map", getMonitorIdentifier(monitor).c_str());
         return workspace; // use the original string if the monitor is not mapped
     }
     const std::vector<std::string>& curWorkspaces = curWorkspacesIt->second;
     if (curWorkspaces.empty()) {
-        Debug::log(WARN, "[split-monitor-workspaces] No workspaces mapped to monitor ID {}", monitor->m_id);
+        Debug::log(WARN, "[split-monitor-workspaces] No workspaces mapped to monitor ID {}", getMonitorIdentifier(monitor).c_str());
         return workspace; // use the original string if no workspaces are mapped
     }
 
@@ -176,7 +177,7 @@ static SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = f
         return {.success = false, .error = "Invalid cycle value: " + value};
     }
     PHLMONITOR const monitor = getCurrentMonitor();
-    auto const workspaces = g_vMonitorWorkspaceMap[monitor->m_id];
+    auto const workspaces = g_vMonitorWorkspaceMap[getMonitorIdentifier(monitor)];
     int index = -1;
     for (int i = 0; i < g_workspaceCount; i++) {
         if (workspaces[i] == monitor->m_activeWorkspace->m_name) {
@@ -231,84 +232,34 @@ static SDispatchResult splitMoveToWorkspaceSilent(const std::string& workspace)
     return {.success = result == "ok", .error = result};
 }
 
-// Helper function to check if two coordinates are "close" to each other
-// (within a small tolerance of 2 pixels)
-inline bool areCoordinatesClose(double a, double b) {
-    return std::abs(a - b) < 2;
-}
 
-// Finds the best neighboring monitor in a given geometric direction.
-static PHLMONITOR getMonitorInDirection(PHLMONITOR pSourceMonitor, const char& dir) {
+
+static PHLMONITOR getMonitorInDirectionX(PHLMONITOR pSourceMonitor, int delta) {
     if (!pSourceMonitor) {
-        Debug::log(WARN, "[split-monitor-workspaces] getMonitorInDirection called with null source monitor");
+        Debug::log(WARN, "[split-monitor-workspaces] getMonitorInDirectionX called with null source monitor");
         return nullptr;
     }
-    Debug::log(INFO, "[split-monitor-workspaces] getMonitorInDirection: source='{}', dir='{}'", pSourceMonitor->m_name, dir);
 
-    const auto POSA = pSourceMonitor->m_position;
-    const auto SIZEA = pSourceMonitor->m_size;
-    Debug::log(INFO, "[split-monitor-workspaces] Source monitor {}: pos=({}, {}), size=({}, {})", pSourceMonitor->m_name, POSA.x, POSA.y, SIZEA.x, SIZEA.y);
-
-    double longestIntersect = -1;
-    PHLMONITOR longestIntersectMonitor = nullptr;
-
+    std::vector<PHLMONITOR> monitors;
     for (const auto& m : g_pCompositor->m_monitors) {
-        if (m == pSourceMonitor || m->isMirror())
-            continue;
-
-        Debug::log(INFO, "[split-monitor-workspaces] Checking monitor '{}'", m->m_name);
-        const auto POSB = m->m_position;
-        const auto SIZEB = m->m_size;
-        Debug::log(INFO, "[split-monitor-workspaces] Target monitor {}: pos=({}, {}), size=({}, {})", m->m_name, POSB.x, POSB.y, SIZEB.x, SIZEB.y);
-        double intersectLen = -1;
-        
-        // Aliases for up/down
-        char realDir = dir;
-        if (dir == 'u') realDir = 't';
-        if (dir == 'd') realDir = 'b';
-
-        switch (realDir) {
-            case 'l':
-                if (areCoordinatesClose(POSA.x, POSB.x + SIZEB.x)) {
-                    intersectLen = std::max(0.0, std::min(POSA.y + SIZEA.y, POSB.y + SIZEB.y) - std::max(POSA.y, POSB.y));
-                    Debug::log(INFO, "[split-monitor-workspaces] Monitor '{}' is to the left, intersectLen={}", m->m_name, intersectLen);
-                }
-                break;
-            case 'r':
-                if (areCoordinatesClose(POSA.x + SIZEA.x, POSB.x)) {
-                    intersectLen = std::max(0.0, std::min(POSA.y + SIZEA.y, POSB.y + SIZEB.y) - std::max(POSA.y, POSB.y));
-                    Debug::log(INFO, "[split-monitor-workspaces] Monitor '{}' is to the right, intersectLen={}", m->m_name, intersectLen);
-                }
-                break;
-            case 't': // top
-                if (areCoordinatesClose(POSA.y, POSB.y + SIZEB.y)) {
-                    intersectLen = std::max(0.0, std::min(POSA.x + SIZEA.x, POSB.x + SIZEB.x) - std::max(POSA.x, POSB.x));
-                    Debug::log(INFO, "[split-monitor-workspaces] Monitor '{}' is to the top, intersectLen={}", m->m_name, intersectLen);
-                }
-                break;
-            case 'b': // bottom
-                if (areCoordinatesClose(POSA.y + SIZEA.y, POSB.y)) {
-                    intersectLen = std::max(0.0, std::min(POSA.x + SIZEA.x, POSB.x + SIZEB.x) - std::max(POSA.x, POSB.x));
-                    Debug::log(INFO, "[split-monitor-workspaces] Monitor '{}' is to the bottom, intersectLen={}", m->m_name, intersectLen);
-                }
-                break;
-        }
-
-        // The best match is the one with the longest shared edge.
-        if (intersectLen > longestIntersect) {
-            Debug::log(INFO, "[split-monitor-workspaces] New best match: '{}' ({} > {})", m->m_name, intersectLen, longestIntersect);
-            longestIntersect = intersectLen;
-            longestIntersectMonitor = m;
+        if (!m->isMirror()) {
+            monitors.push_back(m);
         }
     }
 
-    if (longestIntersectMonitor) {
-        Debug::log(INFO, "[split-monitor-workspaces] Found best match: '{}'", longestIntersectMonitor->m_name);
-    } else {
-        Debug::log(WARN, "[split-monitor-workspaces] No matching monitor found in direction '{}'", dir);
+    std::sort(monitors.begin(), monitors.end(), [](const PHLMONITOR& a, const PHLMONITOR& b) {
+        return a->m_position.x < b->m_position.x;
+    });
+
+    auto it = std::find(monitors.begin(), monitors.end(), pSourceMonitor);
+    if (it == monitors.end()) {
+        return nullptr;
     }
 
-    return longestIntersectMonitor;
+    long int currentIndex = std::distance(monitors.begin(), it);
+    long int nextIndex = (currentIndex + delta + monitors.size()) % monitors.size();
+
+    return monitors[nextIndex];
 }
 
 static SDispatchResult changeMonitor(bool quiet, const std::string& value) {
@@ -321,55 +272,24 @@ static SDispatchResult changeMonitor(bool quiet, const std::string& value) {
     Debug::log(INFO, "[split-monitor-workspaces] Current monitor: {}", monitor->m_name);
     
     PHLMONITOR nextMonitor = nullptr;
-
-    // First, try to handle geometric directions (l, r, u, d, t, b)
-    if (value.length() == 1 && std::string("lrudtb").find(value[0]) != std::string::npos) {
-        Debug::log(INFO, "[split-monitor-workspaces] Attempting geometric monitor search with direction '{}'", value[0]);
-        nextMonitor = getMonitorInDirection(monitor, value[0]);
-        if (nextMonitor) {
-            Debug::log(INFO, "[split-monitor-workspaces] Found geometric monitor: {}", nextMonitor->m_name);
-        } else {
-            Debug::log(WARN, "[split-monitor-workspaces] No geometric monitor found, falling back to index-based cycling.");
-        }
+    if (value == "next" || value == "prev" || value.starts_with('+') || value.starts_with('-')) {
+        int delta = getDelta(value);
+        nextMonitor = getMonitorInDirectionX(monitor, delta);
     }
-
-    // If it's not a geometric direction or no geometric monitor was found, fall back to index-based cycling
-    if (!nextMonitor) {
-        Debug::log(INFO, "[split-monitor-workspaces] Using index-based monitor cycling.");
-        // This part is the original logic, used as a fallback.
-        long int monitorCount = g_pCompositor->m_monitors.size();
-        Debug::log(INFO, "[split-monitor-workspaces] Total monitors: {}", monitorCount);
-        if (monitorCount <= 1) {
-            Debug::log(INFO, "[split-monitor-workspaces] Not enough monitors to cycle.");
-            return {.success = true, .error = ""}; // Nothing to do
+    else {
+        try {
+            int monitorId = std::stoi(value);
+            for (const auto& m : g_pCompositor->m_monitors) {
+                if (m->m_id == monitorId) {
+                    nextMonitor = m;
+                    break;
+                }
+            }
         }
-
-        int const delta = getDelta(value);
-        Debug::log(INFO, "[split-monitor-workspaces] Cycling with delta: {}", delta);
-        if (delta == 0 && value != "0") { // getDelta returns 0 for invalid args and for "0"
-             Debug::log(WARN, "[split-monitor-workspaces] Invalid monitor value: {}", value.c_str());
-             return {.success = false, .error = "Invalid monitor value: " + value};
+        catch (const std::invalid_argument&) {
+            Debug::log(WARN, "[split-monitor-workspaces] Invalid monitor value: {}", value.c_str());
+            return {.success = false, .error = "Invalid monitor value: " + value};
         }
-
-        long int currentMonitorIndex = -1;
-        for (size_t i = 0; i < monitorCount; i++) {
-             if (g_pCompositor->m_monitors[i] == monitor) {
-                 currentMonitorIndex = i;
-                 break;
-             }
-        }
-        if (currentMonitorIndex == -1) {
-            Debug::log(WARN, "[split-monitor-workspaces] Monitor ID {} not found in monitor list?", monitor->m_id);
-            return {.success = false, .error = "Monitor ID not found in monitor list: " + std::to_string(monitor->m_id)};
-        }
-        Debug::log(INFO, "[split-monitor-workspaces] Current monitor index: {}", currentMonitorIndex);
-
-        // Correctly calculate the next index with wrapping for both positive and negative deltas
-        long int nextMonitorIndex = (currentMonitorIndex + delta % monitorCount + monitorCount) % monitorCount;
-        Debug::log(INFO, "[split-monitor-workspaces] Next monitor index: {}", nextMonitorIndex);
-
-        nextMonitor = g_pCompositor->m_monitors[nextMonitorIndex];
-        Debug::log(INFO, "[split-monitor-workspaces] Next monitor is: {}", nextMonitor->m_name);
     }
 
     if (!nextMonitor) {
@@ -418,7 +338,11 @@ static SDispatchResult grabRogueWindows(const std::string& /*unused*/)
             continue;
 
         auto const workspaceName = window->m_workspace->m_name;
-        auto const monitorID = window->m_monitor->m_id;
+        PHLMONITOR monitor = window->m_monitor.lock();
+        if (!monitor) {
+            continue;
+        }
+        auto const monitorID = getMonitorIdentifier(monitor);
 
         bool isInRogueWorkspace = !g_vMonitorWorkspaceMap.contains(monitorID) || // if the monitor is not mapped, the window is rogue
                                   !std::ranges::any_of(g_vMonitorWorkspaceMap[monitorID], [&workspaceName](const auto& mappedWorkspaceName) { return workspaceName == mappedWorkspaceName; });
@@ -442,14 +366,32 @@ static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-
         return;
     }
 
-    int workspaceIndex = (monitor->m_id * g_workspaceCount) + 1;
+    std::vector<PHLMONITOR> monitors;
+    for (const auto& m : g_pCompositor->m_monitors) {
+        if (!m->isMirror()) {
+            monitors.push_back(m);
+        }
+    }
+
+    std::sort(monitors.begin(), monitors.end(), [](const PHLMONITOR& a, const PHLMONITOR& b) {
+        return a->m_position.x < b->m_position.x;
+    });
+
+    auto it = std::find(monitors.begin(), monitors.end(), monitor);
+    if (it == monitors.end()) {
+        Debug::log(ERR, "[split-monitor-workspaces] Could not find monitor in sorted monitor list. This should not happen.");
+        return;
+    }
+
+    long int monitorIndex = std::distance(monitors.begin(), it);
+    int workspaceIndex = (monitorIndex * g_workspaceCount) + 1;
 
     Debug::log(INFO, "{}",
                "[split-monitor-workspaces] Mapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + g_workspaceCount - 1) + " to monitor " + monitor->m_name);
 
     for (int i = workspaceIndex; i < workspaceIndex + g_workspaceCount; i++) {
         std::string workspaceName = std::to_string(i);
-        g_vMonitorWorkspaceMap[monitor->m_id].push_back(workspaceName);
+        g_vMonitorWorkspaceMap[getMonitorIdentifier(monitor)].push_back(workspaceName);
         PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
 
         // when not using persistent workspaces, we still want to create the first workspace on each monitor
@@ -475,15 +417,14 @@ static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-
     }
 }
 
+
 static void unmapMonitor(const PHLMONITOR& monitor)
 {
-    int workspaceIndex = (monitor->m_id * g_workspaceCount) + 1;
+    Debug::log(INFO, "[split-monitor-workspaces] Unmapping workspaces from monitor {}", monitor->m_name);
 
-    Debug::log(INFO, "{}",
-               "[split-monitor-workspaces] Unmapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + g_workspaceCount - 1) + " from monitor " + monitor->m_name);
-
-    if (g_vMonitorWorkspaceMap.contains(monitor->m_id)) {
-        for (const auto& workspaceName : g_vMonitorWorkspaceMap[monitor->m_id]) {
+    auto monitorIdentifier = getMonitorIdentifier(monitor);
+    if (g_vMonitorWorkspaceMap.contains(monitorIdentifier)) {
+        for (const auto& workspaceName : g_vMonitorWorkspaceMap[monitorIdentifier]) {
             PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
 
             if (workspace.get() != nullptr) {
@@ -492,20 +433,27 @@ static void unmapMonitor(const PHLMONITOR& monitor)
                 std::erase(g_vPersistentWorkspaces, workspace);
             }
         }
-        g_vMonitorWorkspaceMap.erase(monitor->m_id);
+        g_vMonitorWorkspaceMap.erase(monitorIdentifier);
     }
 }
 
 static void unmapAllMonitors()
 {
     while (!g_vMonitorWorkspaceMap.empty()) {
-        auto [monitorID, workspaces] = *g_vMonitorWorkspaceMap.begin();
-        PHLMONITOR monitor = g_pCompositor->getMonitorFromID(monitorID);
+        auto [monitorIdentifier, workspaces] = *g_vMonitorWorkspaceMap.begin();
+        PHLMONITOR monitor = nullptr;
+        for (const auto& m : g_pCompositor->m_monitors) {
+            if (getMonitorIdentifier(m) == monitorIdentifier) {
+                monitor = m;
+                break;
+            }
+        }
+
         if (monitor != nullptr) {
             unmapMonitor(monitor); // will remove the monitor from the map
         }
         else {
-            g_vMonitorWorkspaceMap.erase(monitorID); // remove it manually
+            g_vMonitorWorkspaceMap.erase(monitorIdentifier); // remove it manually
         }
     }
     g_vMonitorWorkspaceMap.clear();
