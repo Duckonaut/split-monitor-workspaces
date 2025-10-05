@@ -319,7 +319,13 @@ static SDispatchResult changeMonitor(bool quiet, const std::string& value) {
     Debug::log(INFO, "[split-monitor-workspaces] Next workspace name: {}", nextWorkspaceName);
     Debug::log(INFO, "[split-monitor-workspaces] Dispatching command: '{}'", command + nextWorkspaceName);
 
-    auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", command + nextWorkspaceName);
+    auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + nextWorkspaceName);
+    if (result != "ok") {
+        return {.success = false, .error = result};
+    }
+
+    auto const result2 = HyprlandAPI::invokeHyprctlCommand("dispatch", command + nextWorkspaceName);
+    return {.success = result2 == "ok", .error = result2};
     return {.success = result == "ok", .error = result};
 }
 
