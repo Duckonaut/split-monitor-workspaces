@@ -297,13 +297,29 @@ static SDispatchResult changeMonitor(bool quiet, const std::string& value) {
         return {.success = false, .error = "Failed to determine next monitor."};
     }
 
-    // Final dispatch logic
-    int nextWorkspaceID = nextMonitor->m_activeWorkspace->m_id;
-    std::string command = quiet ? "movetoworkspacesilent " : "movetoworkspace ";
-    Debug::log(INFO, "[split-monitor-workspaces] Next workspace ID: {}", nextWorkspaceID);
-    Debug::log(INFO, "[split-monitor-workspaces] Dispatching command: '{}'", command + std::to_string(nextWorkspaceID));
+    // find the current workspace index in the monitor's workspace list
+    auto const workspaces = g_vMonitorWorkspaceMap[getMonitorIdentifier(monitor)];
+    auto it = std::ranges::find(workspaces, monitor->m_activeWorkspace->m_name);
+    if (it == workspaces.end()) {
+        Debug::log(ERR, "[split-monitor-workspaces] Current workspace {} not found in monitor workspaces", monitor->m_activeWorkspace->m_name.c_str());
+        return {.success = false, .error = "Could not find active workspace in monitor workspaces"};
+    }
+    long int workspaceIndex = std::distance(workspaces.begin(), it);
 
-    auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", command + std::to_string(nextWorkspaceID));
+    // get the corresponding workspace on the next monitor
+    auto const nextWorkspaces = g_vMonitorWorkspaceMap[getMonitorIdentifier(nextMonitor)];
+    if ((size_t)workspaceIndex >= nextWorkspaces.size()) {
+        Debug::log(ERR, "[split-monitor-workspaces] Workspace index {} is out of bounds for the next monitor's workspaces", workspaceIndex);
+        return {.success = false, .error = "Workspace index is out of bounds for the next monitor's workspaces"};
+    }
+    const std::string& nextWorkspaceName = nextWorkspaces[workspaceIndex];
+
+    // Final dispatch logic
+    std::string command = quiet ? "movetoworkspacesilent " : "movetoworkspace ";
+    Debug::log(INFO, "[split-monitor-workspaces] Next workspace name: {}", nextWorkspaceName);
+    Debug::log(INFO, "[split-monitor-workspaces] Dispatching command: '{}'", command + nextWorkspaceName);
+
+    auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", command + nextWorkspaceName);
     return {.success = result == "ok", .error = result};
 }
 
