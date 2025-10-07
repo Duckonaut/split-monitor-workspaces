@@ -407,6 +407,18 @@ static void remapAllMonitors()
     for (const PHLMONITOR& monitor : g_pCompositor->m_monitors) {
         mapMonitor(monitor);
     }
+    // if keepFocused is false or first load, switch to the first workspace on the first monitor
+    // because we assume the monitor with the lowest ID is the primary monitor
+    if (!g_keepFocused || g_firstLoad) {
+        if (!g_pCompositor->m_monitors.empty()) {
+            PHLMONITOR firstMonitor = g_pCompositor->m_monitors[0];
+            if (!g_vMonitorWorkspaceMap[firstMonitor->m_id].empty()) {
+                std::string firstWorkspace = g_vMonitorWorkspaceMap[firstMonitor->m_id][0];
+                Debug::log(INFO, "[split-monitor-workspaces] Switching to first workspace {} on first monitor {}", firstWorkspace, firstMonitor->m_name);
+                HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + firstWorkspace);
+            }
+        }
+    }
 }
 
 static void loadConfigValues()
