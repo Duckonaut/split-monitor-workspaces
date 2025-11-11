@@ -18,6 +18,7 @@ auto constexpr k_keepFocused = "plugin:split-monitor-workspaces:keep_focused";
 auto constexpr k_enableNotifications = "plugin:split-monitor-workspaces:enable_notifications";
 auto constexpr k_enablePersistentWorkspaces = "plugin:split-monitor-workspaces:enable_persistent_workspaces";
 auto constexpr k_enableWrapping = "plugin:split-monitor-workspaces:enable_wrapping";
+auto constexpr k_defaultMonitor = "cursor:default_monitor";
 
 static const CHyprColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
 
@@ -26,12 +27,13 @@ static bool g_keepFocused = false;
 static bool g_enableNotifications = false;
 static bool g_enablePersistentWorkspaces = true;
 static bool g_enableWrapping = true;
+static std::string g_defaultMonitor = "";
 
-// the first time we load the plugin, we want to switch to the first workspace on the first monitor regardless of keepFocused
+// the first time we load the plugin, we want to switch to the first workspace on the primary monitor regardless of keepFocused
 static bool g_firstLoad = true;
 
-static std::map<uint64_t, std::vector<std::string>> g_vMonitorWorkspaceMap;
-static std::vector<PHLWORKSPACE> g_vPersistentWorkspaces;
+static std::map<MONITORID, std::vector<std::string>> g_vMonitorWorkspaceMap;
+static std::vector<PHLWORKSPACE> g_vPersistentWorkspaces; // to keep ownership of persistent workspaces, otherwise Hyprland will remove them
 
 static SP<HOOK_CALLBACK_FN> e_monitorAddedHandle = nullptr;
 static SP<HOOK_CALLBACK_FN> e_monitorRemovedHandle = nullptr;
@@ -61,15 +63,62 @@ static int getDelta(const std::string& direction)
     return 0;
 }
 
-static int getParamValue(const char* paramName)
+template <typename T> static auto getConfigValue(const char* paramName)
 {
+    /*
+    From the Hyprland source code:
+    > For all types except STRING typeof(**retval) is the config value type (e.g. INT or FLOAT)
+    > Please note STRING is a special type and instead of
+    > typeof(**retval) being const char*, typeof(\*retval) is a const char*.
+    */
     Debug::log(INFO, "[split-monitor-workspaces] Getting config value {}", paramName);
-    const auto* const paramPtr = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, paramName)->getDataStaticPtr();
-    if (paramPtr == nullptr) {
-        Debug::log(WARN, "[split-monitor-workspaces] Failed to get config value {}", paramName);
-        return 0;
+
+    if constexpr (std::is_same_v<T, Hyprlang::STRING>) {
+        const auto* const paramPtr = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, paramName)->getDataStaticPtr();
+        if (paramPtr == nullptr) {
+            Debug::log(WARN, "[split-monitor-workspaces] Failed to get string config value {}", paramName);
+            return std::string{};
+        }
+        auto paramStr = std::string{*paramPtr};
+        // strip leading and trailing quotes if any (god I hate toml)
+        if (paramStr.size() >= 2 && paramStr.front() == '"' && paramStr.back() == '"') {
+            paramStr = paramStr.substr(1, paramStr.size() - 2);
+        }
+        return paramStr;
     }
-    return **paramPtr;
+    else {
+        const auto* const paramPtr = (T* const*)HyprlandAPI::getConfigValue(PHANDLE, paramName)->getDataStaticPtr();
+        if (paramPtr == nullptr || *paramPtr == nullptr) {
+            Debug::log(WARN, "[split-monitor-workspaces] Failed to get config value {}", paramName);
+            return T{0};
+        }
+        return **paramPtr;
+    }
+}
+
+static PHLMONITOR getPrimaryMonitor()
+{
+    Debug::log(INFO, "[split-monitor-workspaces] Determining primary monitor");
+    // The hyprland config can specify a default monitor to focus on startup, the plugin respects that setting
+    if (!g_defaultMonitor.empty()) {
+        for (const PHLMONITOR& monitor : g_pCompositor->m_monitors) {
+            if (monitor->m_name == g_defaultMonitor) {
+                Debug::log(INFO, "[split-monitor-workspaces] Using default monitor '{}' from config", g_defaultMonitor.c_str());
+                return monitor;
+            }
+        }
+        Debug::log(WARN, "[split-monitor-workspaces] Default monitor '{}' not found, will use monitor with lowest ID as ", g_defaultMonitor.c_str());
+    }
+    // default monitor not set, let's use the monitor with the lowest ID
+    // but let's first filter out invalid monitors (likely will never happen I assume, but just in case)
+    auto validMonitors = g_pCompositor->m_monitors | std::views::filter([](const PHLMONITOR& m) { return m->m_id != MONITOR_INVALID; });
+    auto const primaryMonitorIt = std::ranges::min_element(validMonitors, std::ranges::less{}, [](const PHLMONITOR& m) { return m->m_id; });
+    if (primaryMonitorIt != validMonitors.end()) {
+        Debug::log(INFO, "[split-monitor-workspaces] Using monitor '{}' with lowest ID {} as primary monitor", (*primaryMonitorIt)->m_name.c_str(), (*primaryMonitorIt)->m_id);
+        return *primaryMonitorIt;
+    }
+    Debug::log(ERR, "[split-monitor-workspaces] No valid monitors found?");
+    throw std::runtime_error("split-monitor-workspaces: No valid monitors found?");
 }
 
 static const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std::string& workspace)
@@ -407,27 +456,38 @@ static void remapAllMonitors()
     for (const PHLMONITOR& monitor : g_pCompositor->m_monitors) {
         mapMonitor(monitor);
     }
-    // if keepFocused is false or first load, switch to the first workspace on the first monitor
-    // because we assume the monitor with the lowest ID is the primary monitor
+    // if keepFocused is false or first load, switch to the first workspace on the default or first monitor
     if (!g_keepFocused || g_firstLoad) {
         if (!g_pCompositor->m_monitors.empty()) {
-            PHLMONITOR firstMonitor = g_pCompositor->m_monitors[0];
-            if (!g_vMonitorWorkspaceMap[firstMonitor->m_id].empty()) {
-                std::string firstWorkspace = g_vMonitorWorkspaceMap[firstMonitor->m_id][0];
-                Debug::log(INFO, "[split-monitor-workspaces] Switching to first workspace {} on first monitor {}", firstWorkspace, firstMonitor->m_name);
+            PHLMONITOR primaryMonitor = getPrimaryMonitor();
+            if (primaryMonitor == nullptr) {
+                Debug::log(ERR, "[split-monitor-workspaces] No primary monitor found?");
+                return;
+            }
+            if (!g_vMonitorWorkspaceMap.contains(primaryMonitor->m_id)) {
+                Debug::log(ERR, "[split-monitor-workspaces] Primary monitor ID {} not found in workspace map?", primaryMonitor->m_id);
+                return;
+            }
+            if (!g_vMonitorWorkspaceMap[primaryMonitor->m_id].empty()) {
+                std::string firstWorkspace = g_vMonitorWorkspaceMap[primaryMonitor->m_id][0];
+                Debug::log(INFO, "[split-monitor-workspaces] Switching to first workspace {} on first monitor {}", firstWorkspace, primaryMonitor->m_name);
                 HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + firstWorkspace);
             }
+        }
+        else {
+            Debug::log(ERR, "[split-monitor-workspaces] No monitors found?");
         }
     }
 }
 
 static void loadConfigValues()
 {
-    g_enableNotifications = getParamValue(k_enableNotifications) != 0;
-    g_enablePersistentWorkspaces = getParamValue(k_enablePersistentWorkspaces) != 0;
-    g_keepFocused = getParamValue(k_keepFocused) != 0;
-    g_workspaceCount = getParamValue(k_workspaceCount);
-    g_enableWrapping = getParamValue(k_enableWrapping) != 0;
+    g_enableNotifications = getConfigValue<Hyprlang::INT>(k_enableNotifications) != 0;
+    g_enablePersistentWorkspaces = getConfigValue<Hyprlang::INT>(k_enablePersistentWorkspaces) != 0;
+    g_keepFocused = getConfigValue<Hyprlang::INT>(k_keepFocused) != 0;
+    g_workspaceCount = getConfigValue<Hyprlang::INT>(k_workspaceCount);
+    g_enableWrapping = getConfigValue<Hyprlang::INT>(k_enableWrapping) != 0;
+    g_defaultMonitor = getConfigValue<Hyprlang::STRING>(k_defaultMonitor);
 }
 
 static void reload()
@@ -459,7 +519,7 @@ static void monitorRemovedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, 
 
 static void configReloadedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/) // NOLINT(performance-unnecessary-value-param)
 {
-    // anything you call in this function should not reload the config, as it will cause an infinite loop
+    // !!! anything you call in this function should not reload the config, as it will cause an infinite loop !!!
     Debug::log(INFO, "[split-monitor-workspaces] Config reloaded");
     raiseNotification("[split-monitor-workspaces] Config reloaded");
     reload();
@@ -480,6 +540,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addConfigValue(PHANDLE, k_enableNotifications, Hyprlang::INT{0});
     HyprlandAPI::addConfigValue(PHANDLE, k_enablePersistentWorkspaces, Hyprlang::INT{1});
     HyprlandAPI::addConfigValue(PHANDLE, k_enableWrapping, Hyprlang::INT{1});
+    HyprlandAPI::addConfigValue(PHANDLE, k_defaultMonitor, Hyprlang::STRING{""});
 
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-workspace", splitWorkspace);
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-cycleworkspaces", splitCycleWorkspaces);
