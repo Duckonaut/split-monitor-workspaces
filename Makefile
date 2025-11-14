@@ -61,5 +61,6 @@ clangd:
 	echo "$(COMPILE_FLAGS) $(COMPILE_DEFINES)" | \
 	sed 's/--no-gnu-unique//g' | \
 	sed 's/ -/\n-/g' | \
+	sed 's/-fno-gnu-unique//g' | \
 	sed 's/std=c++23/std=c++2b/g' \
 	> compile_flags.txt
