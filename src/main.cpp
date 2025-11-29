@@ -3,6 +3,7 @@
 #include <hyprland/src/Compositor.hpp>
 #include <hyprland/src/config/ConfigManager.hpp>
 #include <hyprland/src/desktop/Workspace.hpp>
+#include <hyprland/src/desktop/state/FocusState.hpp>
 #include <hyprland/src/helpers/Color.hpp>
 #include <hyprland/src/managers/KeybindManager.hpp>
 #include <hyprutils/memory/SharedPtr.hpp>
@@ -203,7 +204,7 @@ static const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, con
 static PHLMONITOR getCurrentMonitor()
 {
     // get last focused monitor, because some people switch monitors with a keybind while the cursor is on a different monitor
-    if (PHLMONITOR monitor = g_pCompositor->m_lastMonitor.lock()) {
+    if (PHLMONITOR monitor = Desktop::focusState()->monitor()) {
         return monitor;
     }
     Debug::log(WARN, "[split-monitor-workspaces] Last monitor does not exist, falling back to cursor's monitor");
