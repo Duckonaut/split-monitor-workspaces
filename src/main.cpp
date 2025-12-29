@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <hyprland/src/Compositor.hpp>
@@ -21,6 +22,8 @@ auto constexpr k_enableNotifications = "plugin:split-monitor-workspaces:enable_n
 auto constexpr k_enablePersistentWorkspaces = "plugin:split-monitor-workspaces:enable_persistent_workspaces";
 auto constexpr k_enableWrapping = "plugin:split-monitor-workspaces:enable_wrapping";
 auto constexpr k_defaultMonitor = "cursor:default_monitor";
+auto constexpr k_monitorPriority = "plugin:split-monitor-workspaces:priority";
+auto constexpr k_monitorMaxWorkspaces = "plugin:split-monitor-workspaces:maxWorkspaces";
 
 static const CHyprColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
 
@@ -36,6 +39,25 @@ static bool g_firstLoad = true;
 
 static std::map<MONITORID, std::vector<std::string>> g_vMonitorWorkspaceMap;
 static std::vector<PHLWORKSPACE> g_vPersistentWorkspaces; // to keep ownership of persistent workspaces, otherwise Hyprland will remove them
+
+struct MonitorConfigValue {
+    int64_t value = 0;
+    bool wasSetFromConfig = false;
+
+    // favor value in usage
+    operator int64_t() const
+    {
+        return value;
+    }
+    int64_t operator=(int64_t v)
+    {
+        value = v;
+        return value;
+    }
+};
+
+static std::map<std::string, MonitorConfigValue> g_vMonitorPriorities;
+static std::map<std::string, MonitorConfigValue> g_vMonitorMaxWorkspaces;
 
 static SP<HOOK_CALLBACK_FN> e_monitorAddedHandle = nullptr;
 static SP<HOOK_CALLBACK_FN> e_monitorRemovedHandle = nullptr;
@@ -362,11 +384,28 @@ static SDispatchResult grabRogueWindows(const std::string& /*unused*/)
         bool isInRogueWorkspace = !g_vMonitorWorkspaceMap.contains(monitorID) || // if the monitor is not mapped, the window is rogue
                                   !std::ranges::any_of(g_vMonitorWorkspaceMap[monitorID], [&workspaceName](const auto& mappedWorkspaceName) { return workspaceName == mappedWorkspaceName; });
         if (isInRogueWorkspace) {
-            Log::logger->log(Log::INFO, "[split-monitor-workspaces] Moving rogue window {} from workspace {} to workspace {}", window->m_title.c_str(), workspaceName.c_str(), currentWorkspace->m_name.c_str());
+            Log::logger->log(Log::INFO, "[split-monitor-workspaces] Moving rogue window {} from workspace {} to workspace {}", window->m_title.c_str(), workspaceName.c_str(),
+                             currentWorkspace->m_name.c_str());
             g_pCompositor->moveWindowToWorkspaceSafe(window, currentWorkspace);
         }
     }
     return {.success = true, .error = ""};
+}
+
+static std::tuple<int64_t, int64_t> calcWorkspaceBaseIndex(const std::string& name)
+{
+    auto [it, inserted] = g_vMonitorMaxWorkspaces.try_emplace(name, g_workspaceCount);
+
+    int64_t currentPriority = g_vMonitorPriorities[name];
+
+    int64_t offset = 0;
+    for (const auto& [n, p] : g_vMonitorPriorities) {
+        if (p < currentPriority) {
+            offset += g_vMonitorMaxWorkspaces[n];
+        }
+    }
+
+    return {offset, it->second}; // offset, maxWorkspaces
 }
 
 static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-functions-to-static)
@@ -381,12 +420,18 @@ static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-
         return;
     }
 
-    int workspaceIndex = (monitor->m_id * g_workspaceCount) + 1;
+    // determine monitor priority if not set
+    if (!g_vMonitorPriorities.contains(monitor->m_name)) {
+        g_vMonitorPriorities[monitor->m_name] = static_cast<int64_t>(g_vMonitorPriorities.size());
+    }
+
+    auto [workspaceIndex, maxWorkspaces] = calcWorkspaceBaseIndex(monitor->m_name);
+    workspaceIndex += 1;
 
     Log::logger->log(Log::INFO, "{}",
-               "[split-monitor-workspaces] Mapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + g_workspaceCount - 1) + " to monitor " + monitor->m_name);
+                     "[split-monitor-workspaces] Mapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + maxWorkspaces - 1) + " to monitor " + monitor->m_name);
 
-    for (int i = workspaceIndex; i < workspaceIndex + g_workspaceCount; i++) {
+    for (int i = workspaceIndex; i < workspaceIndex + maxWorkspaces; i++) {
         std::string workspaceName = std::to_string(i);
         g_vMonitorWorkspaceMap[monitor->m_id].push_back(workspaceName);
         PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
@@ -416,10 +461,12 @@ static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-
 
 static void unmapMonitor(const PHLMONITOR& monitor)
 {
-    int workspaceIndex = (monitor->m_id * g_workspaceCount) + 1;
+    auto [workspaceIndex, maxWorkspaces] = calcWorkspaceBaseIndex(monitor->m_name);
+    workspaceIndex += 1;
 
     Log::logger->log(Log::INFO, "{}",
-               "[split-monitor-workspaces] Unmapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + g_workspaceCount - 1) + " from monitor " + monitor->m_name);
+                     "[split-monitor-workspaces] Unmapping workspaces " + std::to_string(workspaceIndex) + "-" + std::to_string(workspaceIndex + maxWorkspaces - 1) + " from monitor " +
+                         monitor->m_name);
 
     if (g_vMonitorWorkspaceMap.contains(monitor->m_id)) {
         for (const auto& workspaceName : g_vMonitorWorkspaceMap[monitor->m_id]) {
@@ -432,6 +479,14 @@ static void unmapMonitor(const PHLMONITOR& monitor)
             }
         }
         g_vMonitorWorkspaceMap.erase(monitor->m_id);
+    }
+
+    if (g_vMonitorPriorities.contains(monitor->m_name) && !g_vMonitorPriorities[monitor->m_name].wasSetFromConfig) {
+        g_vMonitorPriorities.erase(monitor->m_name);
+    }
+
+    if (g_vMonitorMaxWorkspaces.contains(monitor->m_name) && !g_vMonitorMaxWorkspaces[monitor->m_name].wasSetFromConfig) {
+        g_vMonitorMaxWorkspaces.erase(monitor->m_name);
     }
 }
 
@@ -527,6 +582,51 @@ static void configReloadedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, 
     reload();
 }
 
+static Hyprlang::CParseResult monitorPriorityConfigHandler(const char* command, const char* args)
+{
+    const auto ARGS = CVarList(args);
+
+    int64_t priorityCounter = 0;
+    for (const auto& arg : ARGS) {
+        Debug::log(INFO, "[split-monitor-workspaces] Setting monitor priority: {} -> {}", arg.c_str(), priorityCounter);
+        g_vMonitorPriorities[arg] = {.value = priorityCounter, .wasSetFromConfig = true};
+        priorityCounter++;
+    }
+
+    Hyprlang::CParseResult result;
+    return result;
+}
+
+static Hyprlang::CParseResult monitorMaxWorkspacesConfigHandler(const char* command, const char* args)
+{
+    const auto ARGS = CVarList(args);
+
+    if (ARGS.size() != 2) {
+        Hyprlang::CParseResult result;
+        result.setError("[split-monitor-workspaces] Invalid number of arguments, expected 2 (name, maxWorkspaces)");
+        return result;
+    }
+
+    std::string parseError;
+
+    try {
+        const std::string monitorName = ARGS[0];
+        const int maxWorkspaces = std::stoi(ARGS[1]);
+
+        Debug::log(INFO, "[split-monitor-workspaces] Setting monitor max workspaces: {} -> {}", monitorName.c_str(), maxWorkspaces);
+        g_vMonitorMaxWorkspaces[monitorName] = {.value = maxWorkspaces, .wasSetFromConfig = true};
+    }
+    catch (...) {
+        parseError = "[split-monitor-workspaces] Failed to parse monitor max workspaces";
+    }
+
+    Hyprlang::CParseResult result;
+    if (!parseError.empty()) {
+        result.setError(parseError.c_str());
+    }
+    return result;
+}
+
 // Do NOT change this function.
 APICALL EXPORT std::string PLUGIN_API_VERSION()
 {
@@ -543,6 +643,8 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addConfigValue(PHANDLE, k_enablePersistentWorkspaces, Hyprlang::INT{1});
     HyprlandAPI::addConfigValue(PHANDLE, k_enableWrapping, Hyprlang::INT{1});
     HyprlandAPI::addConfigValue(PHANDLE, k_defaultMonitor, Hyprlang::STRING{""});
+    HyprlandAPI::addConfigKeyword(PHANDLE, k_monitorPriority, monitorPriorityConfigHandler, (Hyprlang::SHandlerOptions){.allowFlags = false});
+    HyprlandAPI::addConfigKeyword(PHANDLE, k_monitorMaxWorkspaces, monitorMaxWorkspacesConfigHandler, (Hyprlang::SHandlerOptions){.allowFlags = false});
 
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-workspace", splitWorkspace);
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-cycleworkspaces", splitCycleWorkspaces);
