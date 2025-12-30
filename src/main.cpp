@@ -62,6 +62,7 @@ static std::map<std::string, MonitorConfigValue> g_vMonitorMaxWorkspaces;
 static SP<HOOK_CALLBACK_FN> e_monitorAddedHandle = nullptr;
 static SP<HOOK_CALLBACK_FN> e_monitorRemovedHandle = nullptr;
 static SP<HOOK_CALLBACK_FN> e_configReloadedHandle = nullptr;
+static SP<HOOK_CALLBACK_FN> e_preConfigReloadHandle = nullptr;
 
 static void raiseNotification(const std::string& message, float timeout = 5000.0F)
 {
@@ -582,6 +583,15 @@ static void configReloadedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, 
     reload();
 }
 
+static void preConfigReloadCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/) // NOLINT(performance-unnecessary-value-param)
+{
+    // clear monitor-specific config values. This is needed if the user
+    // removes monitor_priority or monitor_max_workspaces entries from
+    // the config. Without this, the old values would persist.
+    g_vMonitorPriorities.clear();
+    g_vMonitorMaxWorkspaces.clear();
+}
+
 static Hyprlang::CParseResult monitorPriorityConfigHandler(const char* command, const char* args)
 {
     const auto ARGS = CVarList(args);
@@ -665,6 +675,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     e_monitorAddedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorAdded", monitorAddedCallback);
     e_monitorRemovedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorRemoved", monitorRemovedCallback);
     e_configReloadedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "configReloaded", configReloadedCallback);
+    e_preConfigReloadHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "preConfigReload", preConfigReloadCallback);
 
     // initial mapping of the workspaces will happen after plugin initialization, through the configReloadedCallback
     // this is because Hyprland will automatically force a config reload after the plugin is loaded
