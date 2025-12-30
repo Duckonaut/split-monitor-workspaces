@@ -132,7 +132,9 @@ It also provides the following config values
 | `plugin:split-monitor-workspaces:keep_focused`                  | boolean   | 0         | Keep current workspaces focused on plugin init/reload |
 | `plugin:split-monitor-workspaces:enable_notifications`          | boolean   | 0         | Enable notifications                                  |
 | `plugin:split-monitor-workspaces:enable_persistent_workspaces`  | boolean   | 1         | Enable management of persistent workspaces. This means the plugin will at initialization create `$count` workspaces on each monitor and make them persistent. |
-| `plugin:split-monitor-workspaces:enable_wrapping`               | boolean   | 1         | Enable wrapping around workspaces when cycling through them or moving windows to the prev/next workspace. 
+| `plugin:split-monitor-workspaces:enable_wrapping`               | boolean   | 1         | Enable wrapping around workspaces when cycling through them or moving windows to the prev/next workspace. |
+| `plugin:split-monitor-workspaces:monitor_priority`              | keyword   | -         | Set per monitor priorities. The first monitor in the list will have the highest priority, the second monitor one lower and so on. |
+| `plugin:split-monitor-workspaces:max_workspaces`                | keyword   | -         | Set per monitor maximum number of workspaces that should be created. |
 
 This plugin supports [waybar's](https://github.com/Alexays/Waybar) `hyprland/workspaces` module. You can configure it like this:
 
@@ -163,6 +165,9 @@ plugin {
         keep_focused = 0
         enable_notifications = 0
         enable_persistent_workspaces = 1
+        monitor_priority = DP-1, DVI-D-1
+        max_workspaces = DP-1, 9
+        max_workspaces = DVI-D-1, 5
     }
 }
 

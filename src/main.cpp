@@ -22,8 +22,8 @@ auto constexpr k_enableNotifications = "plugin:split-monitor-workspaces:enable_n
 auto constexpr k_enablePersistentWorkspaces = "plugin:split-monitor-workspaces:enable_persistent_workspaces";
 auto constexpr k_enableWrapping = "plugin:split-monitor-workspaces:enable_wrapping";
 auto constexpr k_defaultMonitor = "cursor:default_monitor";
-auto constexpr k_monitorPriority = "plugin:split-monitor-workspaces:priority";
-auto constexpr k_monitorMaxWorkspaces = "plugin:split-monitor-workspaces:maxWorkspaces";
+auto constexpr k_monitorPriority = "plugin:split-monitor-workspaces:monitor_priority";
+auto constexpr k_monitorMaxWorkspaces = "plugin:split-monitor-workspaces:max_workspaces";
 
 static const CHyprColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
 
