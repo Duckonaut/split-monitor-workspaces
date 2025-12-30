@@ -71,6 +71,12 @@ static void raiseNotification(const std::string& message, float timeout = 5000.0
     }
 }
 
+// avoid default initialization with []
+int64_t getMonitorMaxWorkspaces(const std::string& name)
+{
+    return g_vMonitorMaxWorkspaces.contains(name) ? g_vMonitorMaxWorkspaces[name] : g_workspaceCount;
+}
+
 static int getDelta(const std::string& direction)
 {
     if (direction == "next")
@@ -252,7 +258,7 @@ static SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = f
     PHLMONITOR const monitor = getCurrentMonitor();
     auto const workspaces = g_vMonitorWorkspaceMap[monitor->m_id];
     int index = -1;
-    for (int i = 0; i < g_vMonitorMaxWorkspaces[monitor->m_name]; i++) {
+    for (int i = 0; i < getMonitorMaxWorkspaces(monitor->m_name); i++) {
         if (workspaces[i] == monitor->m_activeWorkspace->m_name) {
             index = i;
             break;
@@ -268,9 +274,9 @@ static SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = f
         if (nowrap) {
             return {.success = true, .error = ""}; // null operation because wrapping is disabled
         }
-        index = g_vMonitorMaxWorkspaces[monitor->m_name] - 1; // wrap around to the last workspace
+        index = getMonitorMaxWorkspaces(monitor->m_name) - 1; // wrap around to the last workspace
     }
-    else if (index >= g_vMonitorMaxWorkspaces[monitor->m_name]) {
+    else if (index >= getMonitorMaxWorkspaces(monitor->m_name)) {
         if (nowrap) {
             return {.success = true, .error = ""}; // null operation because wrapping is disabled
         }
@@ -393,20 +399,18 @@ static SDispatchResult grabRogueWindows(const std::string& /*unused*/)
     return {.success = true, .error = ""};
 }
 
-static std::tuple<int64_t, int64_t> calcWorkspaceBaseIndex(const std::string& name)
+static int64_t calcWorkspaceBaseIndex(const std::string& name)
 {
-    auto [it, inserted] = g_vMonitorMaxWorkspaces.try_emplace(name, g_workspaceCount);
-
     int64_t currentPriority = g_vMonitorPriorities[name];
 
     int64_t offset = 0;
     for (const auto& [n, p] : g_vMonitorPriorities) {
         if (p < currentPriority) {
-            offset += g_vMonitorMaxWorkspaces[n];
+            offset += getMonitorMaxWorkspaces(n);
         }
     }
 
-    return {offset, it->second}; // offset, maxWorkspaces
+    return offset;
 }
 
 static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-functions-to-static)
@@ -426,7 +430,8 @@ static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-
         g_vMonitorPriorities[monitor->m_name] = static_cast<int64_t>(g_vMonitorPriorities.size());
     }
 
-    auto [workspaceIndex, maxWorkspaces] = calcWorkspaceBaseIndex(monitor->m_name);
+    int64_t workspaceIndex = calcWorkspaceBaseIndex(monitor->m_name);
+    int64_t maxWorkspaces = getMonitorMaxWorkspaces(monitor->m_name);
     workspaceIndex += 1;
 
     Log::logger->log(Log::INFO, "{}",
@@ -462,7 +467,8 @@ static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-
 
 static void unmapMonitor(const PHLMONITOR& monitor)
 {
-    auto [workspaceIndex, maxWorkspaces] = calcWorkspaceBaseIndex(monitor->m_name);
+    int64_t workspaceIndex = calcWorkspaceBaseIndex(monitor->m_name);
+    int64_t maxWorkspaces = getMonitorMaxWorkspaces(monitor->m_name);
     workspaceIndex += 1;
 
     Log::logger->log(Log::INFO, "{}",
