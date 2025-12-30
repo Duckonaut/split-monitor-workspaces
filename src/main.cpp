@@ -603,6 +603,7 @@ static Hyprlang::CParseResult monitorMaxWorkspacesConfigHandler(const char* comm
 
     if (ARGS.size() != 2) {
         Hyprlang::CParseResult result;
+        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Invalid number of arguments, expected 2 (name, maxWorkspaces)");
         result.setError("[split-monitor-workspaces] Invalid number of arguments, expected 2 (name, maxWorkspaces)");
         return result;
     }
@@ -617,6 +618,7 @@ static Hyprlang::CParseResult monitorMaxWorkspacesConfigHandler(const char* comm
         g_vMonitorMaxWorkspaces[monitorName] = {.value = maxWorkspaces, .wasSetFromConfig = true};
     }
     catch (...) {
+        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Failed to parse monitor max workspaces");
         parseError = "[split-monitor-workspaces] Failed to parse monitor max workspaces";
     }
 
