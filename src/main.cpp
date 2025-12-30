@@ -252,7 +252,7 @@ static SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = f
     PHLMONITOR const monitor = getCurrentMonitor();
     auto const workspaces = g_vMonitorWorkspaceMap[monitor->m_id];
     int index = -1;
-    for (int i = 0; i < g_workspaceCount; i++) {
+    for (int i = 0; i < g_vMonitorMaxWorkspaces[monitor->m_name]; i++) {
         if (workspaces[i] == monitor->m_activeWorkspace->m_name) {
             index = i;
             break;
@@ -268,9 +268,9 @@ static SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = f
         if (nowrap) {
             return {.success = true, .error = ""}; // null operation because wrapping is disabled
         }
-        index = g_workspaceCount - 1; // wrap around to the last workspace
+        index = g_vMonitorMaxWorkspaces[monitor->m_name] - 1; // wrap around to the last workspace
     }
-    else if (index >= g_workspaceCount) {
+    else if (index >= g_vMonitorMaxWorkspaces[monitor->m_name]) {
         if (nowrap) {
             return {.success = true, .error = ""}; // null operation because wrapping is disabled
         }
