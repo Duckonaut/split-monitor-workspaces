@@ -588,7 +588,7 @@ static Hyprlang::CParseResult monitorPriorityConfigHandler(const char* command, 
 
     int64_t priorityCounter = 0;
     for (const auto& arg : ARGS) {
-        Debug::log(INFO, "[split-monitor-workspaces] Setting monitor priority: {} -> {}", arg.c_str(), priorityCounter);
+        Log::logger->log(Log::INFO, "[split-monitor-workspaces] Setting monitor priority: {} -> {}", arg.c_str(), priorityCounter);
         g_vMonitorPriorities[arg] = {.value = priorityCounter, .wasSetFromConfig = true};
         priorityCounter++;
     }
@@ -613,7 +613,7 @@ static Hyprlang::CParseResult monitorMaxWorkspacesConfigHandler(const char* comm
         const std::string monitorName = ARGS[0];
         const int maxWorkspaces = std::stoi(ARGS[1]);
 
-        Debug::log(INFO, "[split-monitor-workspaces] Setting monitor max workspaces: {} -> {}", monitorName.c_str(), maxWorkspaces);
+        Log::logger->log(Log::INFO, "[split-monitor-workspaces] Setting monitor max workspaces: {} -> {}", monitorName.c_str(), maxWorkspaces);
         g_vMonitorMaxWorkspaces[monitorName] = {.value = maxWorkspaces, .wasSetFromConfig = true};
     }
     catch (...) {
