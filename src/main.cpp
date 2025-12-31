@@ -634,12 +634,12 @@ static Hyprlang::CParseResult monitorMaxWorkspacesConfigHandler(const char* comm
         g_vMonitorMaxWorkspaces[monitorName] = {.value = maxWorkspaces, .wasSetFromConfig = true};
     }
     catch (...) {
-        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Failed to parse monitor max workspaces");
         parseError = "[split-monitor-workspaces] Failed to parse monitor max workspaces";
     }
 
     Hyprlang::CParseResult result;
     if (!parseError.empty()) {
+        Log::logger->log(parseError.c_str());
         result.setError(parseError.c_str());
     }
     return result;
