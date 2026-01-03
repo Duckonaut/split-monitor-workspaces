@@ -459,7 +459,7 @@ static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-
                 // if this is the first workspace on the monitor, we still want to make sure it's focused on startup
                 // this is to avoid issues where the workspace is destroyed right after we move it (#220)
                 if (i == workspaceIndex && g_firstLoad) {
-                    monitor->m_activeWorkspace = workspace;
+                    monitor->changeWorkspace(workspace, false, true, true);
                 }
             }
         }
@@ -506,7 +506,7 @@ static void unmapMonitor(const PHLMONITOR& monitor)
 
 static void unmapAllMonitors()
 {
-    Debug::log(INFO, "[split-monitor-workspaces] Unmapping all monitors");
+    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Unmapping all monitors");
     while (!g_vMonitorWorkspaceMap.empty()) {
         auto [monitorID, workspaces] = *g_vMonitorWorkspaceMap.begin();
         PHLMONITOR monitor = g_pCompositor->getMonitorFromID(monitorID);
@@ -523,13 +523,13 @@ static void unmapAllMonitors()
 
 static void remapAllMonitors()
 {
-    Debug::log(INFO, "[split-monitor-workspaces] Remapping all monitors");
+    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Remapping all monitors");
     raiseNotification("[split-monitor-workspaces] Remapping workspaces...");
     unmapAllMonitors();
     for (const PHLMONITOR& monitor : g_pCompositor->m_monitors) {
         mapMonitor(monitor);
     }
-    Debug::log(INFO, "[split-monitor-workspaces] Mapped all monitors");
+    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Mapped all monitors");
     // if keepFocused is false or first load, switch to the first workspace on the default or first monitor
     if (!g_keepFocused || g_firstLoad) {
         if (!g_pCompositor->m_monitors.empty()) {
@@ -556,21 +556,21 @@ static void remapAllMonitors()
 
 static void loadConfigValues()
 {
-    Debug::log(INFO, "[split-monitor-workspaces] Loading config values");
+    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Loading config values");
     g_enableNotifications = getConfigValue<Hyprlang::INT>(k_enableNotifications) != 0;
     g_enablePersistentWorkspaces = getConfigValue<Hyprlang::INT>(k_enablePersistentWorkspaces) != 0;
     g_keepFocused = getConfigValue<Hyprlang::INT>(k_keepFocused) != 0;
     g_workspaceCount = getConfigValue<Hyprlang::INT>(k_workspaceCount);
     g_enableWrapping = getConfigValue<Hyprlang::INT>(k_enableWrapping) != 0;
     g_defaultMonitor = getConfigValue<Hyprlang::STRING>(k_defaultMonitor);
-    Debug::log(INFO,
-               "[split-monitor-workspaces] Config values loaded: workspaceCount={}, keepFocused={}, enableNotifications={}, enablePersistentWorkspaces={}, enableWrapping={}, defaultMonitor='{}'",
-               g_workspaceCount, g_keepFocused, g_enableNotifications, g_enablePersistentWorkspaces, g_enableWrapping, g_defaultMonitor.c_str());
+    Log::logger->log(
+        Log::INFO, "[split-monitor-workspaces] Config values loaded: workspaceCount={}, keepFocused={}, enableNotifications={}, enablePersistentWorkspaces={}, enableWrapping={}, defaultMonitor='{}'",
+        g_workspaceCount, g_keepFocused, g_enableNotifications, g_enablePersistentWorkspaces, g_enableWrapping, g_defaultMonitor.c_str());
 }
 
 static void reload()
 {
-    Debug::log(INFO, "[split-monitor-workspaces] Reloading plugin configuration");
+    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Reloading plugin configuration");
     loadConfigValues();
     remapAllMonitors();
     g_firstLoad = false;
