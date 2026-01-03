@@ -467,7 +467,7 @@ static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-
 
     if (!g_keepFocused || g_firstLoad) {
         // we also want to switch to the first workspace when the plugin is first loaded
-        Log::logger->log(Log::INFO, "[split-monitor-workspaces] Switching to first workspace on monitor {}", monitor->m_name);
+        Log::logger->log(Log::INFO, "[split-monitor-workspaces] Switching to first workspace {} on monitor {}", std::to_string(workspaceIndex), monitor->m_name);
         HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + std::to_string(workspaceIndex));
     }
 }
