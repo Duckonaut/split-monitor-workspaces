@@ -149,6 +149,8 @@ This plugin supports [waybar's](https://github.com/Alexays/Waybar) `hyprland/wor
       "default": "",
       "empty": "" // persistent (created by this plugin)
     },
+    "on-scroll-up": "hyprctl dispatch split-cycleworkspaces -1",
+    "on-scroll-down": "hyprctl dispatch split-cycleworkspaces +1",
     "all-outputs": false // recommended
   },
 ```
