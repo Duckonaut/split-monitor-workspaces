@@ -135,6 +135,7 @@ It also provides the following config values
 | `plugin:split-monitor-workspaces:enable_wrapping`               | boolean   | 1         | Enable wrapping around workspaces when cycling through them or moving windows to the prev/next workspace. |
 | `plugin:split-monitor-workspaces:monitor_priority`              | keyword   | -         | Set per monitor priorities. The first monitor in the list will have the highest priority, the second monitor one lower and so on. |
 | `plugin:split-monitor-workspaces:max_workspaces`                | keyword   | -         | Set per monitor maximum number of workspaces that should be created. |
+| `plugin:split-monitor-workspaces:link_monitors`                 | boolean   | 0         | Enable gnome-like workspace switching. When enabled, switching workspaces on one monitor will switch all monitors to the corresponding workspace. |
 
 This plugin supports [waybar's](https://github.com/Alexays/Waybar) `hyprland/workspaces` module. You can configure it like this:
 
@@ -165,7 +166,14 @@ plugin {
         keep_focused = 0
         enable_notifications = 0
         enable_persistent_workspaces = 1
+
+        # set this to 1 for gnome-like workspace switching
+        link_monitors = 0
+
+        # if you want a different monitor order
         monitor_priority = DP-1, DVI-D-1
+
+        # you can also set max workspaces per monitor
         max_workspaces = DP-1, 9
         max_workspaces = DVI-D-1, 5
     }
