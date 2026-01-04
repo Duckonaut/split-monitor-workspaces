@@ -24,6 +24,7 @@ auto constexpr k_enableWrapping = "plugin:split-monitor-workspaces:enable_wrappi
 auto constexpr k_defaultMonitor = "cursor:default_monitor";
 auto constexpr k_monitorPriority = "plugin:split-monitor-workspaces:monitor_priority";
 auto constexpr k_monitorMaxWorkspaces = "plugin:split-monitor-workspaces:max_workspaces";
+auto constexpr k_linkMonitors = "plugin:split-monitor-workspaces:link_monitors";
 
 static const CHyprColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
 
@@ -33,6 +34,7 @@ static bool g_enableNotifications = false;
 static bool g_enablePersistentWorkspaces = true;
 static bool g_enableWrapping = true;
 static std::string g_defaultMonitor = "";
+static bool g_linkMonitors = false;
 
 // the first time we load the plugin, we want to switch to the first workspace on the primary monitor regardless of keepFocused
 static bool g_firstLoad = true;
@@ -158,7 +160,7 @@ static const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, con
     // #1 - "empty" -> get the first empty workspace on the monitor, or the last workspace if all have windows
     // #2 - "+1", "-2" -> relative workspace ID, e.g. next or previous workspace
     // #3 - "1", "2", "3" -> absolute workspace ID, e.g. workspace 1, 2 or 3 on the current monitor
-    // if these formats fail to be parsed form the workspace string, we assume the user wants to switch to a workspace by name and simply pass that to hyprland
+    // if these formats fail to be parsed from the workspace string, we assume the user wants to switch to a workspace by name and simply pass that to hyprland
 
     auto const curWorkspacesIt = g_vMonitorWorkspaceMap.find(monitor->m_id);
     if (curWorkspacesIt == g_vMonitorWorkspaceMap.end()) {
@@ -244,8 +246,18 @@ static PHLMONITOR getCurrentMonitor()
 
 static SDispatchResult splitWorkspace(const std::string& workspace)
 {
-    auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
-    return {.success = result == "ok", .error = result};
+    if (!g_linkMonitors) {
+        // not linked => just change workspace on current monitor
+        auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+        return {.success = result == "ok", .error = result};
+    }
+    // workspaces are linked => change workspace on all monitors
+    std::vector<SDispatchResult> results;
+    for (const PHLMONITOR& monitor : g_pCompositor->m_monitors) {
+        bool noFocus = monitor != getCurrentMonitor(); // only focus the current monitor
+        monitor->changeWorkspace(g_pCompositor->getWorkspaceByName(getWorkspaceFromMonitor(monitor, workspace)), false, true, noFocus);
+    }
+    return {.success = true, .error = ""};
 }
 
 static SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = false)
@@ -255,36 +267,40 @@ static SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = f
         Log::logger->log(Log::WARN, "[split-monitor-workspaces] Invalid cycle value: {}", value.c_str());
         return {.success = false, .error = "Invalid cycle value: " + value};
     }
-    PHLMONITOR const monitor = getCurrentMonitor();
-    auto const workspaces = g_vMonitorWorkspaceMap[monitor->m_id];
-    int index = -1;
-    for (int i = 0; i < getMonitorMaxWorkspaces(monitor->m_name); i++) {
-        if (workspaces[i] == monitor->m_activeWorkspace->m_name) {
-            index = i;
-            break;
-        }
-    }
-    if (index == -1) {
-        Log::logger->log(Log::WARN, "[split-monitor-workspaces] Could not find active workspace in monitor workspaces. Aborting cycle.");
-        return {.success = false, .error = "Could not find active workspace in monitor workspaces"};
-    }
 
-    index += delta;
-    if (index < 0) {
-        if (nowrap) {
-            return {.success = true, .error = ""}; // null operation because wrapping is disabled
-        }
-        index = getMonitorMaxWorkspaces(monitor->m_name) - 1; // wrap around to the last workspace
-    }
-    else if (index >= getMonitorMaxWorkspaces(monitor->m_name)) {
-        if (nowrap) {
-            return {.success = true, .error = ""}; // null operation because wrapping is disabled
-        }
-        index = 0; // wrap around to the first workspace
-    }
+    auto const monitorsToCycle = g_linkMonitors ? g_pCompositor->m_monitors : std::vector<PHLMONITOR>{getCurrentMonitor()};
 
-    auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "workspace " + workspaces[index]);
-    return {.success = result == "ok", .error = result};
+    for (const PHLMONITOR& monitor : monitorsToCycle) {
+        Log::logger->log(Log::DEBUG, "[split-monitor-workspaces] Cycling workspace on monitor {} (ID {}) by {}", monitor->m_name, monitor->m_id, delta);
+        auto const workspaces = g_vMonitorWorkspaceMap[monitor->m_id];
+        int index = -1;
+        for (int i = 0; i < getMonitorMaxWorkspaces(monitor->m_name); i++) {
+            if (workspaces[i] == monitor->m_activeWorkspace->m_name) {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1) {
+            Log::logger->log(Log::WARN, "[split-monitor-workspaces] Could not find active workspace in monitor workspaces. Aborting cycle.");
+            return {.success = false, .error = "Could not find active workspace in monitor workspaces"};
+        }
+
+        index += delta;
+        if (index < 0) {
+            if (nowrap) {
+                return {.success = true, .error = ""}; // null operation because wrapping is disabled
+            }
+            index = getMonitorMaxWorkspaces(monitor->m_name) - 1; // wrap around to the last workspace
+        }
+        else if (index >= getMonitorMaxWorkspaces(monitor->m_name)) {
+            if (nowrap) {
+                return {.success = true, .error = ""}; // null operation because wrapping is disabled
+            }
+            index = 0; // wrap around to the first workspace
+        }
+        monitor->changeWorkspace(g_pCompositor->getWorkspaceByName(workspaces[index]), false, true, monitor != getCurrentMonitor());
+    }
+    return {.success = true, .error = ""};
 }
 
 static SDispatchResult splitCycleWorkspaces(const std::string& value)
@@ -301,7 +317,14 @@ static SDispatchResult splitCycleWorkspacesNowrap(const std::string& value)
 
 static SDispatchResult splitMoveToWorkspace(const std::string& workspace)
 {
-    auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+    if (!g_linkMonitors) {
+        // not linked => just move to workspace on current monitor
+        auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + workspace);
+        return {.success = result == "ok", .error = result};
+    }
+    // workspaces are linked => silently move to workspace, then change workspace on all monitors
+    auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+    splitWorkspace(workspace);
     return {.success = result == "ok", .error = result};
 }
 
@@ -563,9 +586,11 @@ static void loadConfigValues()
     g_workspaceCount = getConfigValue<Hyprlang::INT>(k_workspaceCount);
     g_enableWrapping = getConfigValue<Hyprlang::INT>(k_enableWrapping) != 0;
     g_defaultMonitor = getConfigValue<Hyprlang::STRING>(k_defaultMonitor);
-    Log::logger->log(
-        Log::INFO, "[split-monitor-workspaces] Config values loaded: workspaceCount={}, keepFocused={}, enableNotifications={}, enablePersistentWorkspaces={}, enableWrapping={}, defaultMonitor='{}'",
-        g_workspaceCount, g_keepFocused, g_enableNotifications, g_enablePersistentWorkspaces, g_enableWrapping, g_defaultMonitor.c_str());
+    g_linkMonitors = getConfigValue<Hyprlang::INT>(k_linkMonitors) != 0;
+    Log::logger->log(Log::INFO,
+                     "[split-monitor-workspaces] Config values loaded: workspaceCount={}, keepFocused={}, enableNotifications={}, enablePersistentWorkspaces={}, enableWrapping={}, "
+                     "defaultMonitor='{}', linkMonitors={}",
+                     g_workspaceCount, g_keepFocused, g_enableNotifications, g_enablePersistentWorkspaces, g_enableWrapping, g_defaultMonitor.c_str(), g_linkMonitors);
 }
 
 static void reload()
@@ -679,6 +704,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addConfigValue(PHANDLE, k_defaultMonitor, Hyprlang::STRING{""});
     HyprlandAPI::addConfigKeyword(PHANDLE, k_monitorPriority, monitorPriorityConfigHandler, (Hyprlang::SHandlerOptions){.allowFlags = false});
     HyprlandAPI::addConfigKeyword(PHANDLE, k_monitorMaxWorkspaces, monitorMaxWorkspacesConfigHandler, (Hyprlang::SHandlerOptions){.allowFlags = false});
+    HyprlandAPI::addConfigValue(PHANDLE, k_linkMonitors, Hyprlang::INT{0});
 
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-workspace", splitWorkspace);
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-cycleworkspaces", splitCycleWorkspaces);
