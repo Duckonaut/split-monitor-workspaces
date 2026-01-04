@@ -197,5 +197,33 @@ bind = $mainMod SHIFT, 4, split-movetoworkspacesilent, 4
 bind = $mainMod SHIFT, 5, split-movetoworkspacesilent, 5
 ```
 
+#### Omarchy compatibility
+
+For Omarchy installations, make sure you first unbind Omarchy's keybindings by putting the following above your own keybindings (see [this comment](https://github.com/Duckonaut/split-monitor-workspaces/issues/203#issuecomment-3426554922) for more details):
+
+```
+# Unbind Omarchy workspace bindings
+unbind = SUPER, code:10
+unbind = SUPER, code:11
+unbind = SUPER, code:12
+unbind = SUPER, code:13
+unbind = SUPER, code:14
+unbind = SUPER, code:15
+unbind = SUPER, code:16
+unbind = SUPER, code:17
+unbind = SUPER, code:18
+unbind = SUPER, code:19
+unbind = SUPER SHIFT, code:10
+unbind = SUPER SHIFT, code:11
+unbind = SUPER SHIFT, code:12
+unbind = SUPER SHIFT, code:13
+unbind = SUPER SHIFT, code:14
+unbind = SUPER SHIFT, code:15
+unbind = SUPER SHIFT, code:16
+unbind = SUPER SHIFT, code:17
+unbind = SUPER SHIFT, code:18
+unbind = SUPER SHIFT, code:19
+```
+
 # Special thanks
 - [hyprsome](https://github.com/sopa0/hyprsome): An earlier project of similar nature
