@@ -129,8 +129,8 @@ function helpers.resolve_monitor_identifier(identifier)
 		return identifier
 	end
 
-    --- trim trailing spaces just in case
-	desc_prefix = desc_prefix:gsub("%s+$", "")
+    -- trim leading and trailing spaces just in case
+    desc_prefix = desc_prefix:gsub("^%s+", ""):gsub("%s+$", "")
 	if desc_prefix == "" then
 		return nil
 	end
