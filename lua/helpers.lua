@@ -110,6 +110,45 @@ function helpers.calc_base_index(monitor_name)
 end
 
 --- ============================================================
+--- Monitor identifier resolution
+---
+--- Accepts either a plain port name ("DP-2") or a description with
+--- the "desc:" prefix ("desc:ViewSonic Corporation VX2758A-QHD").
+--- Description matching is a prefix match, so make+model is enough
+--- for the match to succeed and the trailing serial can be omitted.
+--- ============================================================
+---@param identifier string
+---@return string|nil
+function helpers.resolve_monitor_identifier(identifier)
+    --- extract the part after "desc:" or nil if there's no prefix
+	---@type string|nil
+	local desc_prefix = identifier:match("^desc:(.*)$")
+
+    --- plain port name, return as-is
+	if not desc_prefix then
+		return identifier
+	end
+
+    --- trim trailing spaces just in case
+	desc_prefix = desc_prefix:gsub("%s+$", "")
+	if desc_prefix == "" then
+		return nil
+	end
+
+    --- match the prefix against each monitor's description
+	for _, monitor in ipairs(hl.get_monitors()) do
+		---@type string
+		local desc = monitor.description or ""
+		if desc:sub(1, #desc_prefix) == desc_prefix then
+			return monitor.name
+		end
+	end
+
+    --- no monitor matches the description
+	return nil
+end
+
+--- ============================================================
 --- Workspace name resolution
 --
 --- Given a monitor and a user-facing workspace string, returns the
