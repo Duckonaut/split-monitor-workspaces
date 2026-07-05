@@ -150,26 +150,8 @@ end
 
 --- Registers priorities and workspace-count overrides for all currently available monitors
 function helpers.load_config_for_all_monitors()
-    --- Load monitor_priority list into the priorities map.
-    for i, name in ipairs(globals.cfg.monitor_priority) do
-        ---@type string|nil
-        local resolved = helpers.resolve_monitor_identifier(name)
-        if resolved then
-            globals.monitor_priorities[resolved] = { value = i - 1, from_config = true }
-        else
-            print("[split-monitor-workspaces] no monitor matched '" .. name .. "'")
-        end
-    end
-
-    --- Load per-monitor max_workspaces overrides.
-    for name, count in pairs(globals.cfg.max_workspaces) do
-        ---@type string|nil
-        local resolved = helpers.resolve_monitor_identifier(name)
-        if resolved then
-            globals.monitor_max_ws_override[resolved] = { value = count, from_config = true }
-        else
-            print("[split-monitor-workspaces] no monitor matched '" .. name .. "'")
-        end
+    for _, monitor in ipairs(hl.get_monitors()) do
+        helpers.load_config_for_monitor(monitor)
     end
 end
 
@@ -179,13 +161,11 @@ function helpers.load_config_for_monitor(monitor)
     for i, name in ipairs(globals.cfg.monitor_priority) do
         if helpers.resolve_monitor_identifier(name) == monitor.name then
             globals.monitor_priorities[monitor.name] = { value = i - 1, from_config = true }
-            helpers.notify("[monitor_priority SINGLE] " .. name)
         end
     end
     for name, count in pairs(globals.cfg.max_workspaces) do
         if helpers.resolve_monitor_identifier(name) == monitor.name then
             globals.monitor_max_ws_override[monitor.name] = { value = count, from_config = true }
-            helpers.notify("[max_workspaces overrides SINGLE] " .. name)
         end
     end
 end
