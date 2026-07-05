@@ -158,7 +158,7 @@ const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std:
         for (const auto& workspaceName : curWorkspaces) {
             PHLWORKSPACE workspacePtr = State::workspaceState()->query().name(workspaceName).run();
             // the workspace we want is either not yet created (=nullptr) or already created but empty (!= nullptr but no windows)
-            if (workspacePtr == nullptr || workspacePtr->getWindows() == 0) {
+            if (workspacePtr == nullptr || workspacePtr->getWindowCount() == 0) {
                 return workspaceName;
             }
         }

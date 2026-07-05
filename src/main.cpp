@@ -3,7 +3,9 @@
 #include <hyprland/src/config/ConfigManager.hpp>
 #include <hyprland/src/config/lua/bindings/LuaBindingsInternal.hpp>
 #include <hyprland/src/debug/log/Logger.hpp>
+#include <hyprland/src/desktop/state/GlobalWindowController.hpp>
 #include <hyprland/src/state/MonitorState.hpp>
+#include <hyprland/src/state/WorkspacePlacementController.hpp>
 #include <hyprland/src/state/WorkspaceState.hpp>
 #include <hyprutils/string/VarList2.hpp>
 #include <hyprutils/utils/ScopeGuard.hpp>
@@ -182,7 +184,7 @@ SDispatchResult grabRogueWindows(const std::string& /*unused*/)
         return {.success = false, .error = "No active workspace found"};
     }
 
-    for (const auto& window : g_pCompositor->m_windows) {
+    for (const auto& window : Desktop::windowState()->windows()) {
         // ignore unmapped and special windows
         if (!window->m_isMapped && !window->onSpecialWorkspace())
             continue;
@@ -195,7 +197,7 @@ SDispatchResult grabRogueWindows(const std::string& /*unused*/)
         if (isInRogueWorkspace) {
             Log::logger->log(Log::INFO, "[split-monitor-workspaces] Moving rogue window {} from workspace {} to workspace {}", window->m_title.c_str(), workspaceName.c_str(),
                              currentWorkspace->m_name.c_str());
-            g_pCompositor->moveWindowToWorkspaceSafe(window, currentWorkspace);
+            Desktop::globalWindowController()->moveWindowToWorkspace(window, currentWorkspace);
         }
     }
     return {.success = true, .error = ""};
@@ -238,7 +240,8 @@ void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-
         }
         if (workspace.get() != nullptr) {
             Log::logger->log(Log::INFO, "[split-monitor-workspaces] Moving workspace {} to monitor {}", workspaceName, monitor->m_name);
-            g_pCompositor->moveWorkspaceToMonitor(workspace, monitor);
+            State::workspacePlacementController()->moveWorkspaceToMonitor(workspace, monitor);
+
             if (g_config.enablePersistentWorkspaces->value()) {
                 workspace->setPersistent(true);
                 g_vPersistentWorkspaces.push_back(workspace); // keep a reference to avoid it being destructed (see https://github.com/hyprwm/Hyprland/discussions/11400#discussioncomment-14085672)
