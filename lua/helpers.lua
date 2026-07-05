@@ -148,7 +148,7 @@ function helpers.resolve_monitor_identifier(identifier)
 	return nil
 end
 
---- Registers priorities and workspace-count overrides for all currenlty available monitors
+--- Registers priorities and workspace-count overrides for all currently available monitors
 function helpers.load_config_for_all_monitors()
     --- Load monitor_priority list into the priorities map.
     for i, name in ipairs(globals.cfg.monitor_priority) do
