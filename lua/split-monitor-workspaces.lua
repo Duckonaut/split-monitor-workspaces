@@ -66,34 +66,9 @@ function api.setup(user_config)
 		end
 	end
 
-	local function load_config_monitors()
-        --- Load monitor_priority list into the priorities map.
-		for i, name in ipairs(globals.cfg.monitor_priority) do
-			---@type string|nil
-			local resolved = helpers.resolve_monitor_identifier(name)
-			if resolved then
-				globals.monitor_priorities[resolved] = { value = i - 1, from_config = true }
-			else
-				print("[split-monitor-workspaces] no monitor matched '" .. name .. "'")
-			end
-		end
-
-        --- Load per-monitor max_workspaces overrides.
-		for name, count in pairs(globals.cfg.max_workspaces) do
-			---@type string|nil
-			local resolved = helpers.resolve_monitor_identifier(name)
-			if resolved then
-				globals.monitor_max_ws_override[resolved] = { value = count, from_config = true }
-			else
-				print("[split-monitor-workspaces] no monitor matched '" .. name .. "'")
-			end
-		end
-	end
-
-    load_config_monitors()
-
 	--- Register event handlers.
 	hl.on("monitor.added", function(monitor)
+        helpers.load_config_for_monitor(monitor)
 		monitors.map_monitor(monitor)
 	end)
 	hl.on("monitor.removed", function(monitor)
@@ -107,7 +82,7 @@ function api.setup(user_config)
 		for name, p in pairs(globals.monitor_max_ws_override) do
 			if not p.from_config then globals.monitor_max_ws_override[name] = nil end
 		end
-        load_config_monitors()
+        helpers.load_config_for_all_monitors()
 		monitors.remap_all_monitors()
 		helpers.notify("Initialized successfully!")
 	end)
