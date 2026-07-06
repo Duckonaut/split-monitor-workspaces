@@ -66,18 +66,9 @@ function api.setup(user_config)
 		end
 	end
 
-	--- Load monitor_priority list into the priorities map.
-	for i, name in ipairs(globals.cfg.monitor_priority) do
-		globals.monitor_priorities[name] = { value = i - 1, from_config = true }
-	end
-
-	--- Load per-monitor max_workspaces overrides.
-	for name, count in pairs(globals.cfg.max_workspaces) do
-		globals.monitor_max_ws_override[name] = { value = count, from_config = true }
-	end
-
 	--- Register event handlers.
 	hl.on("monitor.added", function(monitor)
+        helpers.load_config_for_monitor(monitor)
 		monitors.map_monitor(monitor)
 	end)
 	hl.on("monitor.removed", function(monitor)
@@ -91,6 +82,7 @@ function api.setup(user_config)
 		for name, p in pairs(globals.monitor_max_ws_override) do
 			if not p.from_config then globals.monitor_max_ws_override[name] = nil end
 		end
+        helpers.load_config_for_all_monitors()
 		monitors.remap_all_monitors()
 		helpers.notify("Initialized successfully!")
 	end)
