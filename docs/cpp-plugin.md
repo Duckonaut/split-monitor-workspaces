@@ -2,11 +2,15 @@
 
 [![Build](https://github.com/zjeffer/split-monitor-workspaces/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/zjeffer/split-monitor-workspaces/actions/workflows/main.yml) [![Build on latest Hyprland release](https://github.com/zjeffer/split-monitor-workspaces/actions/workflows/release.yml/badge.svg)](https://github.com/zjeffer/split-monitor-workspaces/actions/workflows/release.yml)
 
+> [!CAUTION] 
+> This plugin has been deprecated. It is recommended to use the Lua package instead. 
+> Below is the old documentation for the C++ plugin.
+
 A small plugin to provide `awesome`/`dwm`-like behavior with workspaces: split them between monitors and provide independent numbering
 
 # Requirements
 
-- Hyprland >= v0.38.1
+- Hyprland >= v0.38.1, <= v0.56.x. The latest git of Hyprland is not supported anymore. Use the lua plugin instead.
 - `meson` and `ninja` to compile the plugin
 
 # Installing

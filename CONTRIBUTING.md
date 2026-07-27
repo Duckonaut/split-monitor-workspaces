@@ -4,7 +4,7 @@
 * Test your code thoroughly before submitting a pull request. 
 * If merging to main, develop your changes to the plugin on the latest git version of Hyprland.
 * If a fix is necessary in a minor Hyprland version but the fix is not compatible with the latest git version, ask the maintainers to create a separate branch to merge to, by creating an issue.
-* Use `clang-format` and `clang-tidy` to format your code and check for common issues. The repo contains config files for both tools.
+* Use luacheck to check your Lua code for errors before submitting a pull request.
 
 
 ## AI Policy
