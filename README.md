@@ -12,7 +12,8 @@ It's explicitly compatible with [the hy3 plugin](https://github.com/outfoxxed/hy
 
 - Hyprland >= 0.55.0
 
-If you're using an older version of Hyprland, or have not yet switched to the new Lua config, you can use the [cpp plugin](./docs/cpp-plugin.md) instead, which provides the same functionality. This will be deprecated soon in favour of the lua package.
+If you're using an older version of Hyprland, or have not yet switched to the new Lua config, you can use the [cpp plugin](./docs/cpp-plugin.md) instead, which provides the same functionality.
+This method will be deprecated when Hyprland 0.57.0 releases.
 
 ## Installation
 
