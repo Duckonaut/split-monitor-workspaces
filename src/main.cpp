@@ -2,7 +2,7 @@
 #include <hyprland/src/plugins/PluginAPI.hpp>
 
 namespace {
-const CHyprColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
+const CHyprColor s_pluginColor = {0xFF / 255.0F, 0x00, 0x00, 1.0F};
 
 HANDLE PHANDLE = nullptr;
 CHyprSignalListener e_configReloadedHandle = nullptr;
