@@ -17,7 +17,7 @@ void raiseNotification(const std::string& message, float timeout = 5000.0F)
 void configReloadedCallback()
 {
     // remind the user every time the config reloads
-    raiseNotification("[split-monitor-workspaces] The C++ plugin has been deprecated, please use the Lua package instead. See the readme for details.");
+    raiseNotification("[split-monitor-workspaces] The C++ plugin has been deprecated, please use the Lua package instead. See the readme for details.", 10000.0F);
 }
 
 // Do NOT change this function.
@@ -32,7 +32,6 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     e_configReloadedHandle = Event::bus()->m_events.config.reloaded.listen(configReloadedCallback);
 
     Log::logger->log(Log::ERR, "[split-monitor-workspaces] The C++ plugin has been deprecated, please use the Lua package instead. See the readme for details.");
-    raiseNotification("[split-monitor-workspaces] The C++ plugin has been deprecated, please use the Lua package instead. See the readme for details.", 10000.0F);
     return {.name = "split-monitor-workspaces", .description = "Split monitor workspace namespaces", .author = "zjeffer", .version = "1.3.0"};
 }
 
