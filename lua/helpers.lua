@@ -184,10 +184,11 @@ end
 --- ============================================================
 
 ---@param monitor HL.Monitor
----@param workspace_str string
+---@param workspace string|integer
 ---@return string
-function helpers.get_workspace_from_monitor(monitor, workspace_str)
-	workspace_str = tostring(workspace_str)
+function helpers.get_workspace_from_monitor(monitor, workspace)
+	---@type string
+	local workspace_str = tostring(workspace)
 
 	---@type string[]|nil
 	local ws_list = globals.monitor_workspace_map[monitor.id]
