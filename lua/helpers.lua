@@ -187,6 +187,8 @@ end
 ---@param workspace_str string
 ---@return string
 function helpers.get_workspace_from_monitor(monitor, workspace_str)
+	workspace_str = tostring(workspace_str
+
 	---@type string[]|nil
 	local ws_list = globals.monitor_workspace_map[monitor.id]
 	if not ws_list or #ws_list == 0 then return workspace_str end
