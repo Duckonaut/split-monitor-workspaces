@@ -43,8 +43,8 @@ function dispatchers.do_workspace(workspace_str)
 				hl.dispatch(hl.dsp.focus({ workspace = target_workspace }))
 				goto continue
 			end
-			--- for other monitors, set the monitor's active workspace to the target without focusig it
-			monitor:set_workspace({ workspace = target_workspace })
+			--- for other monitors, set the monitor's active workspace to the target without focusing it
+			monitor:set_workspace(target_workspace)
 
 			::continue::
 		end
